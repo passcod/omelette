@@ -1,9 +1,12 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
 use chrono::prelude::*;
+use egg_mode::tweet::Tweet;
 use types::{Source, IntermediarySource};
+use super::schema::statuses;
 
-#[derive(Queryable)]
+#[derive(Queryable, Insertable)]
+#[table_name="statuses"]
 pub struct Status {
     pub id: i32,
     pub text: String,
@@ -25,4 +28,55 @@ pub struct Status {
     pub in_reply_to_status: Option<String>,
     pub in_reply_to_user: Option<String>,
     pub quoting_status: Option<String>,
+}
+
+impl From<Tweet> for Status {
+    fn from(tweet: Tweet) -> Status {
+        let (lat, lon) = match tweet.coordinates {
+            None => (None, None),
+            Some((a, o)) => (Some(a), Some(o))
+        };
+
+        let (is_repost, otweet) = match tweet.retweeted_status {
+            None => (false, Box::new(tweet.clone())),
+            Some(tw) => (true, tw)
+        };
+
+        Status {
+            id: 0,
+            text: otweet.text.clone(),
+            author_id: None,
+            geolocation_lat: lat,
+            geolocation_lon: lon,
+            posted_at: otweet.created_at,
+            fetched_at: Utc::now(),
+            fetched_via: None,
+            deleted_at: None,
+            is_repost,
+            reposted_at: if is_repost { Some(tweet.created_at) } else { None },
+            is_marked: if let Some(liked) = tweet.favorited { liked } else { false },
+            marked_at: None,
+            source: Source::Twitter,
+            source_id: format!("{}", otweet.id),
+            source_author: if let Some(ref user) = otweet.user {
+                format!("\"{}\" <@{}> ({})", user.name, user.screen_name, user.id)
+            } else { "".into() },
+            source_app: format!("{} <{}>", otweet.source.name, otweet.source.url),
+            in_reply_to_status: if let Some(id) = otweet.in_reply_to_status_id {
+                Some(format!("{}", id))
+            } else {
+                None
+            },
+            in_reply_to_user: if let Some(ref name) = otweet.in_reply_to_screen_name {
+                Some(format!("{} <@{}>", name, otweet.in_reply_to_user_id.unwrap()))
+            } else {
+                None
+            },
+            quoting_status: if let Some(id) = otweet.quoted_status_id {
+                Some(format!("{}", id))
+            } else {
+                None
+            },
+        }
+    }
 }
