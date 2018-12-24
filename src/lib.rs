@@ -15,6 +15,7 @@ use std::env;
 pub mod types;
 pub mod schema;
 pub mod models;
+pub mod inserts;
 
 pub fn connect() -> PgConnection {
     let database_url = env::var("DATABASE_URL")
