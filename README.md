@@ -53,7 +53,14 @@ database the usual way, put the URL in your environment:
 DATABASE_URL=postgres://localhost/dbname
 ```
 
-And finally start up omelette.
+You’ll also need your user ID. If you don’t know it, you can look it up using
+`omelette --lookup-twitter-id username`.
+
+```
+TWITTER_USER_ID=
+```
+
+And finally, run omelette.
 
 ## …which i install how?
 
