@@ -1,6 +1,6 @@
 # omelette
 
-Inspired by [@MylesBorins' cleanup tool](https://github.com/MylesBorins/cleanup).
+Inspired by [@MylesBorins’s cleanup tool](https://github.com/MylesBorins/cleanup).
 
 The original idea is simple: given a tweet calling the bot with the hashtag
 `#cleanup` and a time delay in seconds to hours, delete the entire thread, that

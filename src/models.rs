@@ -27,4 +27,5 @@ pub struct Status {
     pub in_reply_to_status: Option<String>,
     pub in_reply_to_user: Option<String>,
     pub quoting_status: Option<String>,
+    pub public: bool,
 }

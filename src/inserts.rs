@@ -27,6 +27,7 @@ pub struct NewStatus {
     pub in_reply_to_status: Option<String>,
     pub in_reply_to_user: Option<String>,
     pub quoting_status: Option<String>,
+    pub public: bool,
 }
 
 impl From<Tweet> for NewStatus {
@@ -74,6 +75,12 @@ impl From<Tweet> for NewStatus {
                 Some(format!("{}", id))
             } else {
                 None
+            },
+            public: if let Some(ref user) = otweet.user {
+                user.protected
+            } else {
+                warn!("Cannot know whether tweet {:?} is public, defaulting to false", otweet);
+                false
             },
         }
     }
