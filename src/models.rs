@@ -1,11 +1,11 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
-use chrono::prelude::*;
-use types::{Source, IntermediarySource};
 use super::schema::statuses;
+use chrono::prelude::*;
+use types::{IntermediarySource, Source};
 
 #[derive(Queryable, Insertable)]
-#[table_name="statuses"]
+#[table_name = "statuses"]
 pub struct Status {
     pub id: i32,
     pub text: String,

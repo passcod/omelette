@@ -1,12 +1,12 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
+use super::schema::statuses;
 use chrono::prelude::*;
 use egg_mode::tweet::Tweet;
-use types::{Source, IntermediarySource};
-use super::schema::statuses;
+use types::{IntermediarySource, Source};
 
 #[derive(Insertable)]
-#[table_name="statuses"]
+#[table_name = "statuses"]
 pub struct NewStatus {
     pub text: String,
     pub author_id: Option<i32>,
@@ -34,12 +34,12 @@ impl From<Tweet> for NewStatus {
     fn from(tweet: Tweet) -> NewStatus {
         let (lat, lon) = match tweet.coordinates {
             None => (None, None),
-            Some((a, o)) => (Some(a), Some(o))
+            Some((a, o)) => (Some(a), Some(o)),
         };
 
         let (is_repost, otweet) = match tweet.retweeted_status {
             None => (false, Box::new(tweet.clone())),
-            Some(tw) => (true, tw)
+            Some(tw) => (true, tw),
         };
 
         NewStatus {
@@ -52,14 +52,24 @@ impl From<Tweet> for NewStatus {
             fetched_via: None,
             deleted_at: None,
             is_repost,
-            reposted_at: if is_repost { Some(tweet.created_at) } else { None },
-            is_marked: if let Some(liked) = tweet.favorited { liked } else { false },
+            reposted_at: if is_repost {
+                Some(tweet.created_at)
+            } else {
+                None
+            },
+            is_marked: if let Some(liked) = tweet.favorited {
+                liked
+            } else {
+                false
+            },
             marked_at: None,
             source: Source::Twitter,
             source_id: format!("{}", otweet.id),
             source_author: if let Some(ref user) = otweet.user {
                 format!("\"{}\" <@{}> ({})", user.name, user.screen_name, user.id)
-            } else { "".into() },
+            } else {
+                "".into()
+            },
             source_app: format!("{} <{}>", otweet.source.name, otweet.source.url),
             in_reply_to_status: if let Some(id) = otweet.in_reply_to_status_id {
                 Some(format!("{}", id))
@@ -67,7 +77,11 @@ impl From<Tweet> for NewStatus {
                 None
             },
             in_reply_to_user: if let Some(ref name) = otweet.in_reply_to_screen_name {
-                Some(format!("{} <@{}>", name, otweet.in_reply_to_user_id.unwrap()))
+                Some(format!(
+                    "{} <@{}>",
+                    name,
+                    otweet.in_reply_to_user_id.unwrap()
+                ))
             } else {
                 None
             },
@@ -79,7 +93,10 @@ impl From<Tweet> for NewStatus {
             public: if let Some(ref user) = otweet.user {
                 user.protected
             } else {
-                warn!("Cannot know whether tweet {:?} is public, defaulting to false", otweet);
+                warn!(
+                    "Cannot know whether tweet {:?} is public, defaulting to false",
+                    otweet
+                );
                 false
             },
         }
