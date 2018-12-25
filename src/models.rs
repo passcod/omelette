@@ -5,7 +5,7 @@ use chrono::prelude::*;
 use schema::statuses;
 use types::{IntermediarySource, Source};
 
-#[derive(Queryable, Insertable)]
+#[derive(Debug, Queryable, Insertable)]
 #[table_name = "statuses"]
 pub struct Status {
     pub id: i32,

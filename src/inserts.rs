@@ -5,7 +5,7 @@ use chrono::prelude::*;
 use egg_mode::tweet::Tweet;
 use types::{IntermediarySource, Source};
 
-#[derive(Insertable)]
+#[derive(Debug, Insertable)]
 #[table_name = "statuses"]
 pub struct NewStatus {
     pub text: String,

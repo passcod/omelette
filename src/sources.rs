@@ -32,44 +32,78 @@ impl Twitter {
         Self { token, id: uid.into() }
     }
 
-    fn latest_id_in_db(conn: &PgConnection) -> Option<u64> {
+    fn latest_2_ids_in_db(conn: &PgConnection) -> (Option<u64>, Option<u64>) {
         use models::{pg_repeat, pg_to_number};
         use schema::statuses::dsl::*;
         use types::Source;
 
-        statuses.select(source_id)
+        let mut ids: Vec<u64> = statuses.select(source_id)
             .filter(source.eq(Source::Twitter))
             .filter(is_repost.eq(false))
             // Awful, but less awful than implementing the cast function:
             .order_by(pg_to_number(source_id, pg_repeat("9", 25)).desc())
-            .limit(1)
+            .limit(2)
             .load::<String>(conn)
-            .expect("Can’t retrieve last twitter source ID from db")
-            .get(0)
+            .expect("Can’t retrieve penultimate twitter source ID from db")
+            .iter()
             .map(|sid| sid.parse::<u64>().expect("Can’t parse twitter source ID"))
+            .collect();
+
+        (ids.pop(), ids.pop())
+        // penultimate, latest
     }
 
+/*
+200
+--- <-- if latest is not in packet, cursor down next page
+200
+--- <-- etc
+200
+
+
+???
+
+---
+latest <-- included in thing
+penultimate <-- what we request with
+*/
+
     pub fn sync(&self, conn: &PgConnection) {
-        let latest = Self::latest_id_in_db(conn);
-        if latest.is_some() { println!("Latest twitter ID we have is {}", latest.unwrap()); }
+        let (penultimate, latest) = Self::latest_2_ids_in_db(conn);
+        let latest = latest.or(penultimate).unwrap_or(0);
+        println!("Latest twitter ID we have:\t\t{}", latest);
+        if penultimate.is_some() { println!("Penultimate twitter ID we have:\t\t{}", penultimate.unwrap()); }
 
-        let timeline = user_timeline(self.id, true, true, &self.token)
-            .with_page_size(200)
-            .older(latest); // Confusingly, this says "get tweets newer than latest"
+        let mut statusbag: Vec<NewStatus> = vec![];
+        let mut timeline = user_timeline(self.id, true, true, &self.token).with_page_size(200);
+        let mut batch = 0;
 
-        let (_timeline, feed) = block_on_all(timeline).expect("can’t read twitter timeline");
+        loop {
+            // Get tweets older than penultimate, which should include the *latest*
+            let (tl, feed) = block_on_all(timeline.older(penultimate)).expect("can’t read twitter timeline");
+            batch += 1;
+            timeline = tl;
+            let mut contains_latest = false;
+            let mut ntweets = 0;
+            for tweet in &feed {
+                ntweets += 1;
+                statusbag.push((*tweet).into());
+                if tweet.id == latest {
+                    contains_latest = true;
+                }
+            }
 
-        let mut statii: Vec<NewStatus> = Vec::with_capacity(200);
-        for tweet in &feed {
-            statii.push((*tweet).into());
-            println!("<@{}> {}", tweet.user.as_ref().unwrap().screen_name, tweet.text);
+            println!("Batch {} ({} tweets) contains latest? {}", batch, ntweets, contains_latest);
+            if contains_latest || ntweets == 0 || statusbag.len() >= 3200 { break; }
         }
+
+        println!("Made {} calls to twitter and retrieved {} tweets", batch, statusbag.len());
 
         use diesel::insert_into;
         use schema::statuses::dsl::*;
 
         let inserted = insert_into(statuses)
-            .values(&statii)
+            .values(&statusbag)
             .on_conflict(source_id)
             .do_nothing()
             .execute(conn)
