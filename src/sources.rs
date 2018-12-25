@@ -133,6 +133,14 @@ impl Twitter {
             .execute(conn)
             .expect("Failed to insert tweets in db");
 
-        println!("Inserted {} new tweets in DB", inserted);
+        let hint = if inserted == statusbag.len() - 1 {
+            "as expected"
+        } else if inserted >= statusbag.len() {
+            "something’s odd"
+        } else {
+            "some duplicates"
+        };
+
+        println!("Inserted {} new tweets in DB ({})", inserted, hint);
     }
 }
