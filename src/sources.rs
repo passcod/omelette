@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 use egg_mode::{tweet::user_timeline, user::UserID, KeyPair, Token};
-use inserts::NewStatus;
+use crate::inserts::NewStatus;
 use std::env;
 use tokio::runtime::current_thread::block_on_all;
 
@@ -41,9 +41,9 @@ impl Twitter {
     }
 
     fn latest_2_ids_in_db(conn: &PgConnection) -> (Option<u64>, Option<u64>) {
-        use models::{pg_repeat, pg_to_number};
-        use schema::statuses::dsl::*;
-        use types::Source;
+        use crate::models::{pg_repeat, pg_to_number};
+        use crate::schema::statuses::dsl::*;
+        use crate::types::Source;
 
         let mut ids: Vec<u64> = statuses.select(source_id)
             .filter(source.eq(Source::Twitter))
@@ -124,7 +124,7 @@ impl Twitter {
         );
 
         use diesel::insert_into;
-        use schema::statuses::dsl::*;
+        use crate::schema::statuses::dsl::*;
 
         let inserted = insert_into(statuses)
             .values(&statusbag)

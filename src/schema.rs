@@ -3,7 +3,7 @@
 
 table! {
     use diesel::sql_types::*;
-    use types::*;
+    use crate::types::*;
 
     statuses (id) {
         id -> Int4,

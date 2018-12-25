@@ -2,8 +2,8 @@
 
 use chrono::prelude::*;
 use diesel::sql_types::*;
-use schema::statuses;
-use types::{IntermediarySource, Source};
+use crate::schema::statuses;
+use crate::types::{IntermediarySource, Source};
 
 #[derive(Debug, Queryable, Insertable)]
 #[table_name = "statuses"]
