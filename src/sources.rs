@@ -4,6 +4,12 @@ use inserts::NewStatus;
 use std::env;
 use tokio::runtime::current_thread::block_on_all;
 
+macro_rules! expect_env {
+    ($name:expr) => {
+        env::var($name).expect(&format!("{} must be set", $name))
+    };
+}
+
 pub struct Twitter {
     token: Token,
     id: UserID<'static>,
@@ -12,24 +18,26 @@ pub struct Twitter {
 impl Twitter {
     pub fn load() -> Self {
         let con_token = KeyPair::new(
-            env::var("TWITTER_CONSUMER_KEY").expect("TWITTER_CONSUMER_KEY must be set"),
-            env::var("TWITTER_CONSUMER_SECRET").expect("TWITTER_CONSUMER_SECRET must be set"),
+            expect_env!("TWITTER_CONSUMER_KEY"),
+            expect_env!("TWITTER_CONSUMER_SECRET"),
         );
         let access_token = KeyPair::new(
-            env::var("TWITTER_ACCESS_TOKEN_KEY").expect("TWITTER_ACCESS_TOKEN_KEY must be set"),
-            env::var("TWITTER_ACCESS_TOKEN_SECRET").expect("TWITTER_ACCESS_TOKEN_SECRET must be set"),
+            expect_env!("TWITTER_ACCESS_TOKEN_KEY"),
+            expect_env!("TWITTER_ACCESS_TOKEN_SECRET"),
         );
         let token = Token::Access {
             consumer: con_token,
             access: access_token,
         };
 
-        let uid: u64 = env::var("TWITTER_USER_ID")
-            .expect("TWITTER_USER_ID must be set")
+        let uid: u64 = expect_env!("TWITTER_USER_ID")
             .parse()
             .expect("TWITTER_USER_ID must be u64");
 
-        Self { token, id: uid.into() }
+        Self {
+            token,
+            id: uid.into(),
+        }
     }
 
     fn latest_2_ids_in_db(conn: &PgConnection) -> (Option<u64>, Option<u64>) {
@@ -53,26 +61,31 @@ impl Twitter {
         // penultimate, latest
     }
 
-/*
-200
---- <-- if latest is not in packet, cursor down next page
-200
---- <-- etc
-200
+    /*
+    200
+    --- <-- if latest is not in packet, cursor down next page
+    200
+    --- <-- etc
+    200
 
 
-???
+    ???
 
----
-latest <-- included in thing
-penultimate <-- what we request with
-*/
+    ---
+    latest <-- included in thing
+    penultimate <-- what we request with
+    */
 
     pub fn sync(&self, conn: &PgConnection) {
         let (penultimate, latest) = Self::latest_2_ids_in_db(conn);
         let latest = latest.or(penultimate).unwrap_or(0);
         println!("Latest twitter ID we have:\t\t{}", latest);
-        if penultimate.is_some() { println!("Penultimate twitter ID we have:\t\t{}", penultimate.unwrap()); }
+        if penultimate.is_some() {
+            println!(
+                "Penultimate twitter ID we have:\t\t{}",
+                penultimate.unwrap()
+            );
+        }
 
         let mut statusbag: Vec<NewStatus> = vec![];
         let mut timeline = user_timeline(self.id, true, true, &self.token).with_page_size(200);
@@ -80,7 +93,8 @@ penultimate <-- what we request with
 
         loop {
             // Get tweets older than penultimate, which should include the *latest*
-            let (tl, feed) = block_on_all(timeline.older(penultimate)).expect("can’t read twitter timeline");
+            let (tl, feed) =
+                block_on_all(timeline.older(penultimate)).expect("can’t read twitter timeline");
             batch += 1;
             timeline = tl;
             let mut contains_latest = false;
@@ -93,11 +107,21 @@ penultimate <-- what we request with
                 }
             }
 
-            println!("Batch {} ({} tweets) contains latest? {}", batch, ntweets, contains_latest);
-            if contains_latest || ntweets == 0 || statusbag.len() >= 3200 { break; }
+            println!(
+                "Batch {} ({} tweets) contains latest? {}",
+                batch, ntweets, contains_latest
+            );
+
+            if contains_latest || ntweets == 0 || statusbag.len() >= 3200 {
+                break;
+            }
         }
 
-        println!("Made {} calls to twitter and retrieved {} tweets", batch, statusbag.len());
+        println!(
+            "Made {} calls to twitter and retrieved {} tweets",
+            batch,
+            statusbag.len()
+        );
 
         use diesel::insert_into;
         use schema::statuses::dsl::*;

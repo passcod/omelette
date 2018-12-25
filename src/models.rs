@@ -1,7 +1,7 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
-use diesel::sql_types::*;
 use chrono::prelude::*;
+use diesel::sql_types::*;
 use schema::statuses;
 use types::{IntermediarySource, Source};
 
