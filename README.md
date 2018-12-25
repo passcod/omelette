@@ -54,7 +54,7 @@ DATABASE_URL=postgres://localhost/dbname
 ```
 
 You’ll also need your user ID. If you don’t know it, you can look it up using
-`omelette --lookup-twitter-id username`.
+any of a number of services, like this one: https://tweeterid.com/
 
 ```
 TWITTER_USER_ID=

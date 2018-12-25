@@ -30,8 +30,8 @@ pub struct NewStatus {
     pub public: bool,
 }
 
-impl From<Tweet> for NewStatus {
-    fn from(tweet: Tweet) -> NewStatus {
+impl From<&Tweet> for NewStatus {
+    fn from(tweet: &Tweet) -> NewStatus {
         let (lat, lon) = match tweet.coordinates {
             None => (None, None),
             Some((a, o)) => (Some(a), Some(o)),
@@ -39,7 +39,7 @@ impl From<Tweet> for NewStatus {
 
         let (is_repost, otweet) = match tweet.retweeted_status {
             None => (false, Box::new(tweet.clone())),
-            Some(tw) => (true, tw),
+            Some(ref tw) => (true, tw.clone()),
         };
 
         NewStatus {
@@ -91,7 +91,7 @@ impl From<Tweet> for NewStatus {
                 None
             },
             public: if let Some(ref user) = otweet.user {
-                user.protected
+                !user.protected
             } else {
                 warn!(
                     "Cannot know whether tweet {:?} is public, defaulting to false",

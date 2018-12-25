@@ -636,6 +636,7 @@ dependencies = [
  "egg-mode 0.12.0 (git+https://github.com/QuietMisdreavus/twitter-rs)",
  "egg-mode-text 1.14.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

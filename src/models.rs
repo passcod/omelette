@@ -1,7 +1,8 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
-use super::schema::statuses;
+use diesel::sql_types::*;
 use chrono::prelude::*;
+use schema::statuses;
 use types::{IntermediarySource, Source};
 
 #[derive(Queryable, Insertable)]
@@ -29,3 +30,6 @@ pub struct Status {
     pub quoting_status: Option<String>,
     pub public: bool,
 }
+
+sql_function!(#[sql_name="repeat"] fn pg_repeat(t: Text, n: Int4) -> Text);
+sql_function!(#[sql_name="to_number"] fn pg_to_number(t: Text, f: Text) -> Numeric);
