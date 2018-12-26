@@ -16,21 +16,22 @@ deleting my entire history up to a point, and then keep deleting as I keep
 tweeting, essentially keeping me with a set amount of history, like 6 months or
 something, and archiving the rest.
 
-However, that’s all future plans. For now, this tool does two things:
+However, that’s all future plans. For now, this tool does three things:
 
 1. it stores a copy of all your own tweets, or as far as it sees them, in a
-   Postgres database.
+   PostgreSQL database.
 
-2. it uses that database to parse for `#cleanup` requests and figure out what it
+2. it retrieves media and processes deletion queues.
+
+3. it uses that database to parse for `#cleanup` requests and figure out what it
    should delete from that.
 
-After all, if I have a database of all the stuff I tweet, figuring out what the
-threads look like is super simple. And then all that's needed is to issue some
-deletion requests to a bunch of IDs, job done.
+After all, once I have a database of all the stuff I tweet, figuring out what
+the threads look like is super simple. And then all that's needed is to issue
+some deletion requests to a bunch of IDs, job done.
 
-Additionally, once there’s a database in place and a mechanism for queueing up
-deletes, other behaviours can be bolted on easily, for example through external
-tools that consume and write to the database.
+Additionally, with this system, other behaviours can be bolted on easily through
+external tools and scripts that consume and write to the database.
 
 ## so that’s the story. how do i run one?
 
@@ -105,9 +106,10 @@ There’s [Diesel](http://diesel.rs) and [Egg Mode](https://github.com/QuietMisd
 Sure.
 
 This work is made available to you under the terms of the [Artistic 2.0] license.
-Don’t be a jerk.
+Don’t be a jerk. Additionally, the [Contributor Covenant] applies.
 
 [Artistic 2.0]: ./LICENSE
+[Contributor Covenant]: https://www.contributor-covenant.org/version/1/4/code-of-conduct
 
 This may contain bugs. One of the reasons it saves to DB is to avoid complete
 disaster if it deletes stuff it’s not supposed to. But just in case, I advise
