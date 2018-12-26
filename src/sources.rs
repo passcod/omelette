@@ -146,7 +146,7 @@ impl Twitter {
         let hint = if inserted == statusbag.len() - 1 {
             "as expected"
         } else if inserted >= statusbag.len() {
-            "something’s odd"
+            "something’s odd" // likely some tweet(s) deleted from timeline directly
         } else {
             "some duplicates"
         };
