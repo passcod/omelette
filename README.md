@@ -89,7 +89,8 @@ you'll need to run it more often. When it runs, it will tell you how many calls
 it had to make to the Twitter API to go however far back as it needed to pull
 down your tweet history since it last ran. You want to get it so that it does
 one call every time it runs, and no more than that. Give yourself some margin to
-account for peaks and bursts, but otherwise, set intervals as wide as you can.
+account for peaks and bursts, but otherwise, set intervals as wide as you can
+while still being often enough to be useful (15 minutes at most, plausibly.)
 
 ## that’s cool. who do i have to thank for this?
 
