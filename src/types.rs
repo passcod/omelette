@@ -15,3 +15,15 @@ pub enum IntermediarySource {
     #[db_rename = "twitter archive"]
     TwitterArchive,
 }
+
+#[derive(Debug, DbEnum)]
+#[PgType = "media_type_t"]
+#[DieselType = "Media_type_t"]
+pub enum MediaType {
+    #[db_rename = "photo"]
+    Photo,
+    #[db_rename = "video"]
+    Video,
+    #[db_rename = "gif"]
+    Gif,
+}

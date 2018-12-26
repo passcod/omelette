@@ -1,9 +1,9 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
-use crate::schema::statuses;
 use chrono::prelude::*;
-use egg_mode::tweet::Tweet;
+use crate::schema::statuses;
 use crate::types::{IntermediarySource, Source};
+use egg_mode::tweet::Tweet;
 
 #[derive(Debug, Insertable)]
 #[table_name = "statuses"]

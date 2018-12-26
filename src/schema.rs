@@ -5,6 +5,23 @@ table! {
     use diesel::sql_types::*;
     use crate::types::*;
 
+    entities (id) {
+        id -> Int4,
+        fetched_at -> Timestamptz,
+        status_id -> Int4,
+        ordering -> Nullable<Int4>,
+        media_type -> Media_type_t,
+        source_id -> Text,
+        source_url -> Text,
+        original_status_source_id -> Nullable<Text>,
+        original_status_source_url -> Nullable<Text>,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use crate::types::*;
+
     statuses (id) {
         id -> Int4,
         text -> Text,
@@ -29,3 +46,10 @@ table! {
         public -> Bool,
     }
 }
+
+joinable!(entities -> statuses (status_id));
+
+allow_tables_to_appear_in_same_query!(
+    entities,
+    statuses,
+);

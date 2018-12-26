@@ -1,9 +1,9 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
 use chrono::prelude::*;
-use diesel::sql_types::*;
 use crate::schema::statuses;
 use crate::types::{IntermediarySource, Source};
+use diesel::sql_types::*;
 
 #[derive(Debug, Queryable, Insertable)]
 #[table_name = "statuses"]

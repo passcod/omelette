@@ -1,6 +1,6 @@
+use crate::inserts::NewStatus;
 use diesel::prelude::*;
 use egg_mode::{tweet::user_timeline, user::UserID, KeyPair, Token};
-use crate::inserts::NewStatus;
 use std::env;
 use tokio::runtime::current_thread::block_on_all;
 
@@ -123,8 +123,8 @@ impl Twitter {
             statusbag.len()
         );
 
-        use diesel::insert_into;
         use crate::schema::statuses::dsl::*;
+        use diesel::insert_into;
 
         let inserted = insert_into(statuses)
             .values(&statusbag)
