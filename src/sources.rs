@@ -49,6 +49,7 @@ impl Twitter {
         let mut ids: Vec<u64> = statuses.select(source_id)
             .filter(source.eq(Source::Twitter))
             .filter(is_repost.eq(false))
+            .filter(deleted_at.is_null())
             // Awful, but less awful than implementing the cast function:
             .order_by(pg_to_number(source_id, pg_repeat("9", 25)).desc())
             .limit(2)
