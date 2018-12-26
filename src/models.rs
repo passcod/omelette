@@ -1,8 +1,8 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
 use chrono::prelude::*;
-use crate::schema::statuses;
-use crate::types::{IntermediarySource, Source};
+use crate::schema::{entities, statuses};
+use crate::types::*;
 use diesel::sql_types::*;
 
 #[derive(Debug, Queryable, Insertable)]
@@ -29,6 +29,20 @@ pub struct Status {
     pub in_reply_to_user: Option<String>,
     pub quoting_status: Option<String>,
     pub public: bool,
+}
+
+#[derive(Debug, Queryable, Insertable)]
+#[table_name = "entities"]
+pub struct Entity {
+    pub id: i32,
+    pub fetched_at: DateTime<Utc>,
+    pub status_id: i32,
+    pub ordering: Option<i32>,
+    pub media_type: MediaType,
+    pub source_id: String,
+    pub source_url: String,
+    pub original_status_source_id: Option<String>,
+    pub original_status_source_url: Option<String>,
 }
 
 sql_function!(#[sql_name="repeat"] fn pg_repeat(t: Text, n: Int4) -> Text);

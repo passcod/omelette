@@ -1,9 +1,11 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
 use chrono::prelude::*;
-use crate::schema::statuses;
-use crate::types::{IntermediarySource, Source};
-use egg_mode::tweet::Tweet;
+use crate::schema::{entities, statuses};
+use crate::types::*;
+use egg_mode::{
+    entities::MediaEntity, tweet::{ExtendedTweetEntities, Tweet},
+};
 
 #[derive(Debug, Insertable)]
 #[table_name = "statuses"]
@@ -100,5 +102,71 @@ impl From<&Tweet> for NewStatus {
                 false
             },
         }
+    }
+}
+
+#[derive(Debug, Insertable)]
+#[table_name = "entities"]
+pub struct NewEntity {
+    pub fetched_at: DateTime<Utc>,
+    pub status_id: i32,
+    pub ordering: Option<i32>,
+    pub media_type: MediaType,
+    pub source_id: String,
+    pub source_url: String,
+    pub original_status_source_id: Option<String>,
+    pub original_status_source_url: Option<String>,
+}
+
+impl From<&MediaEntity> for NewEntity {
+    fn from(ent: &MediaEntity) -> NewEntity {
+        let media_type = (&ent.media_type).into();
+        let source_url = match media_type {
+            MediaType::Photo => ent.media_url_https.clone(),
+            MediaType::Gif => ent
+                .video_info
+                .clone()
+                .unwrap()
+                .variants
+                .iter()
+                .find(|v| v.bitrate == Some(0))
+                .expect("GIF entity not in expected format")
+                .url
+                .clone(),
+            MediaType::Video => {
+                let mut variants = ent.video_info.clone().unwrap().variants;
+                variants.sort_unstable_by_key(|v| v.bitrate.unwrap_or(0));
+                variants
+                    .last()
+                    .map(|v| v.url.clone())
+                    .unwrap_or(ent.media_url_https.clone())
+            }
+        };
+
+        NewEntity {
+            fetched_at: Utc::now(),
+            status_id: 0,
+            ordering: None,
+            media_type,
+            source_id: format!("{}", ent.id),
+            source_url,
+            original_status_source_id: ent.source_status_id.map(|id| format!("{}", id)),
+            original_status_source_url: Some(ent.url.clone()),
+        }
+    }
+}
+
+impl NewEntity {
+    pub fn from_extended(ents: &ExtendedTweetEntities) -> Vec<NewEntity> {
+        ents.media
+            .iter()
+            .enumerate()
+            .map(|(i, ent)| {
+                let mut new_ent: NewEntity = ent.into();
+                println!("Entity: {:?}", new_ent);
+                new_ent.ordering = Some(i as i32);
+                new_ent
+            })
+            .collect()
     }
 }

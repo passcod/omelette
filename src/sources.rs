@@ -1,6 +1,7 @@
-use crate::inserts::NewStatus;
+use crate::inserts::{NewEntity, NewStatus};
 use diesel::prelude::*;
 use egg_mode::{tweet::user_timeline, user::UserID, KeyPair, Token};
+use std::collections::HashMap;
 use std::env;
 use tokio::runtime::current_thread::block_on_all;
 
@@ -88,6 +89,7 @@ impl Twitter {
         }
 
         let mut statusbag: Vec<NewStatus> = vec![];
+        let mut entitybag: HashMap<String, Vec<NewEntity>> = HashMap::new();
         let mut timeline = user_timeline(self.id, true, true, &self.token).with_page_size(200);
         let mut batch = 0;
 
@@ -102,6 +104,11 @@ impl Twitter {
             for tweet in &feed {
                 ntweets += 1;
                 statusbag.push((*tweet).into());
+
+                if let Some(ref ents) = tweet.extended_entities {
+                    entitybag.insert(format!("{}", tweet.id), NewEntity::from_extended(ents));
+                }
+
                 if tweet.id == latest {
                     contains_latest = true;
                 }
@@ -132,6 +139,8 @@ impl Twitter {
             .do_nothing()
             .execute(conn)
             .expect("Failed to insert tweets in db");
+
+        // process and associate entitybag
 
         let hint = if inserted == statusbag.len() - 1 {
             "as expected"

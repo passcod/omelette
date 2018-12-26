@@ -1,3 +1,5 @@
+use egg_mode::entities::MediaType as EggMediaType;
+
 #[derive(Debug, DbEnum)]
 #[PgType = "source_t"]
 #[DieselType = "Source_t"]
@@ -26,4 +28,14 @@ pub enum MediaType {
     Video,
     #[db_rename = "gif"]
     Gif,
+}
+
+impl From<&EggMediaType> for MediaType {
+    fn from(mt: &EggMediaType) -> MediaType {
+        match mt {
+            EggMediaType::Photo => MediaType::Photo,
+            EggMediaType::Video => MediaType::Video,
+            EggMediaType::Gif => MediaType::Gif,
+        }
+    }
 }
