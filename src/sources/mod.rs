@@ -16,9 +16,11 @@ pub fn all_available() -> Sources {
         ($struct:ident) => {
             match $struct::load() {
                 Err(err) => println!("Error loading {}: {:?}", stringify!($struct), err),
-                Ok(source) => {sources.insert($struct::source(), source).unwrap(); },
+                Ok(source) => {
+                    sources.insert($struct::source(), source);
+                }
             };
-        }
+        };
     }
 
     use self::twitter::Twitter;
@@ -48,15 +50,38 @@ pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
 
     println!("{} deletion requests ready for action", deletes.len());
 
+    let mut successes = 0;
     for (delete, status) in &deletes {
         if let Some(source) = sources.get(&status.source) {
             match mode {
                 ActionMode::DryRun => println!("DRY RUN: would delete status: {:?}", status),
                 ActionMode::Interactive => unimplemented!(),
                 ActionMode::Auto => {
-                    println!("Deleting {:?} status {} (internal id {})", status.source, status.source_id, status.id);
+                    println!(
+                        "Deleting {:?} status {} (internal id {}) on request from {}",
+                        status.source, status.source_id, status.id, delete.sponsor
+                    );
                     if let Err(err) = source.delete(conn, &status) {
                         println!("Could not delete status: {:?}", err);
+
+                        if let DeleteError::AlreadyDone = err {
+                            diesel::update(deletions.find(delete.id))
+                                .set(executed_at.eq(Utc::now()))
+                                .execute(conn)
+                                .expect(&format!(
+                                    "Failed to record deletion status for #{}",
+                                    delete.id
+                                ));
+                        }
+                    } else {
+                        successes += 1;
+                        diesel::update(deletions.find(delete.id))
+                            .set(executed_at.eq(Utc::now()))
+                            .execute(conn)
+                            .expect(&format!(
+                                "Failed to record deletion success for #{}",
+                                delete.id
+                            ));
                     }
                 }
             };
@@ -64,6 +89,8 @@ pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
             println!("No source available for deletion #{}", delete.id);
         }
     }
+
+    println!("{} successful deletes performed", successes);
 }
 
 #[derive(Clone, Debug)]

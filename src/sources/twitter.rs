@@ -1,8 +1,8 @@
 use chrono::Utc;
 use crate::inserts::{NewEntity, NewStatus};
 use crate::models::Status;
-use crate::types::Source;
 use crate::sources::{DeleteError, LoadError, StatusSource};
+use crate::types::Source;
 use diesel::prelude::*;
 use egg_mode::tweet::{delete, unretweet, user_timeline};
 use egg_mode::{user::UserID, KeyPair, Token};
@@ -66,7 +66,6 @@ impl Twitter {
         // penultimate, latest
     }
 }
-
 
 impl StatusSource for Twitter {
     /*
