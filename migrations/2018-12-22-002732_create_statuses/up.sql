@@ -1,6 +1,6 @@
 CREATE TYPE source_t AS ENUM (
   'twitter',
-  'mastodon.social'
+  'mastodon'
 );
 
 COMMENT ON TYPE source_t IS 'Sources for fetched statuses';

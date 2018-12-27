@@ -6,8 +6,8 @@ use egg_mode::entities::MediaType as EggMediaType;
 pub enum Source {
     #[db_rename = "twitter"]
     Twitter,
-    #[db_rename = "mastodon.social"]
-    MastodonSocial,
+    #[db_rename = "mastodon"]
+    Mastodon,
 }
 
 #[derive(Clone, Debug, DbEnum, Hash, PartialEq, Eq, PartialOrd, Ord)]
