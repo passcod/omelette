@@ -1,18 +1,22 @@
-use crate::models::Status;
+use crate::models::{Deletion, Status};
+use crate::types::Source;
 use diesel::{pg::PgConnection, result::Error as DieselError};
 use egg_mode::error::Error as EggError;
+use std::collections::HashMap;
 use std::env::VarError;
 
 pub mod twitter;
 
-pub fn all_available() -> Vec<Box<StatusSource>> {
-    let mut sources = Vec::new();
+pub type Sources = HashMap<Source, Box<StatusSource>>;
+
+pub fn all_available() -> Sources {
+    let mut sources = HashMap::new();
 
     macro_rules! load_source {
         ($struct:ident) => {
             match $struct::load() {
                 Err(err) => println!("Error loading {}: {:?}", stringify!($struct), err),
-                Ok(source) => sources.push(source),
+                Ok(source) => {sources.insert($struct::source(), source).unwrap(); },
             };
         }
     }
@@ -21,6 +25,58 @@ pub fn all_available() -> Vec<Box<StatusSource>> {
     load_source!(Twitter);
 
     sources
+}
+
+pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
+    use chrono::Utc;
+    use crate::schema::deletions::dsl::*;
+    use crate::schema::statuses;
+    use diesel::prelude::*;
+
+    let deletes: Vec<(Deletion, Status)> = deletions
+        .inner_join(statuses::table)
+        .filter(executed_at.is_null())
+        .filter(not_before.lt(Utc::now()))
+        .order_by(not_before)
+        .load(conn)
+        .expect("Cannot load deletions from DB");
+
+    if deletes.is_empty() {
+        println!("No deletion requests ready, skip.");
+        return;
+    }
+
+    println!("{} deletion requests ready for action", deletes.len());
+
+    for (delete, status) in &deletes {
+        if let Some(source) = sources.get(&status.source) {
+            match mode {
+                ActionMode::DryRun => println!("DRY RUN: would delete status: {:?}", status),
+                ActionMode::Interactive => unimplemented!(),
+                ActionMode::Auto => {
+                    println!("Deleting {:?} status {} (internal id {})", status.source, status.source_id, status.id);
+                    if let Err(err) = source.delete(conn, &status) {
+                        println!("Could not delete status: {:?}", err);
+                    }
+                }
+            };
+        } else {
+            println!("No source available for deletion #{}", delete.id);
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum ActionMode {
+    Auto,
+    DryRun,
+    Interactive,
+}
+
+impl Default for ActionMode {
+    fn default() -> Self {
+        ActionMode::Auto
+    }
 }
 
 pub trait StatusSource {

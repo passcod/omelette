@@ -7,6 +7,9 @@ CREATE TABLE deletions (
   sponsor text NOT NULL
 );
 
+ALTER TABLE ONLY deletions
+    ADD CONSTRAINT deletions_status_id_fkey FOREIGN KEY (status_id) REFERENCES statuses(id);
+
 COMMENT ON COLUMN deletions.id IS 'Omelette-internal ID';
 COMMENT ON COLUMN deletions.status_id IS 'Omelette reference to this deletion request’s target status';
 COMMENT ON COLUMN deletions.created_at IS 'When the request was created';

@@ -13,7 +13,8 @@ fn main() {
     let db = omelette::connect();
 
     let sources = omelette::sources::all_available();
-    for source in &sources {
+    for (name, source) in &sources {
+        println!("Syncing {:?}", name);
         source.sync(&db);
     }
 }

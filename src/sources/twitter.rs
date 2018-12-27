@@ -17,6 +17,10 @@ pub struct Twitter {
 }
 
 impl Twitter {
+    pub fn source() -> Source {
+        Source::Twitter
+    }
+
     pub fn load() -> Result<Box<StatusSource>, LoadError> {
         let con_token = KeyPair::new(
             env::var("TWITTER_CONSUMER_KEY")?,

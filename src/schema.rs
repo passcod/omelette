@@ -60,6 +60,7 @@ table! {
     }
 }
 
+joinable!(deletions -> statuses (status_id));
 joinable!(entities -> statuses (status_id));
 
 allow_tables_to_appear_in_same_query!(
