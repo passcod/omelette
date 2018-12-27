@@ -42,12 +42,16 @@ pub fn sync(conn: &PgConnection, path: &Path) {
                         successes += 1;
                         println!("Stored at hash {}.", hash);
                     }
-                }
-            }
+                },
+            },
         };
     }
 
-    println!("\nSuccessfully downloaded {} (out of {}) entities", successes, todo.len());
+    println!(
+        "\nSuccessfully downloaded {} (out of {}) entities",
+        successes,
+        todo.len()
+    );
 }
 
 fn write_hash(conn: &PgConnection, entity: &Entity, hash: &String) -> Result<(), DieselError> {

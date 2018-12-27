@@ -174,13 +174,15 @@ impl NewEntity {
 #[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
 #[table_name = "deletions"]
 pub struct NewDeletion {
+    pub not_before: DateTime<Utc>,
     pub status_id: i32,
     pub sponsor: String,
 }
 
 impl NewDeletion {
-    fn from_status(status: &Status) -> Self {
+    pub fn from_status(status: &Status, not_before: DateTime<Utc>) -> Self {
         Self {
+            not_before,
             status_id: status.id,
             sponsor: "omelette".into(),
         }
