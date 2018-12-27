@@ -82,9 +82,9 @@ omelette-delete --dry-run
 
 ## …which i install how?
 
-Well, if you’ve got Rust installed, a simple `cargo install omelette` will do.
+If you’ve got macOS or Linux, head on over to [the releases tab].
 
-If you don’t, or you prefer a binary, head on over to [the releases tab].
+Otherwise, if you’ve got Rust installed, clone and `cargo build --release`!
 
 [the releases tab]: https://github.com/passcod/omelette/releases
 
@@ -98,14 +98,14 @@ Run `omelette-delete` with `--dry-run` for a few days or weeks before trusting
 it to do the right thing. You can run it in `--interactive` mode once in a while
 during that time to get prompted before deleting each tweet.
 
-Every time there’s an update to omelette, do that again. There's no undo, no way
+Every time there’s an update to omelette, do that again. There’s no undo, no way
 to insert tweets back where they were again, so be careful with it.
 
-Omelette is designed to be run at intervals, it's not a daemon. Use a cron or a
+Omelette is designed to be run at intervals, it’s not a daemon. Use a cron or a
 systemd timer to keep it going.
 
 If you don’t tweet much, you don’t need to run it as much. But if you tweet lots,
-you'll need to run it more often. When it syncs, it will tell you how many calls
+you’ll need to run it more often. When it syncs, it will tell you how many calls
 it had to make to the Twitter API to go however far back as it needed to pull
 down your tweet history since it last ran. You want to get it so that it does
 one call every time it runs, and no more than that. Give yourself some margin to

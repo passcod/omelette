@@ -2,7 +2,7 @@
 authors = ["Félix Saparelli <felix@passcod.name>"]
 edition = "2018"
 name = "omelette"
-version = "0.1.0"
+version = "1.0.0"
 
 [dependencies]
 blobstore = "0.1.1"
