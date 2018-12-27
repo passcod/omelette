@@ -29,8 +29,6 @@ matrix:
       env: TARGET=x86_64-pc-windows-gnu
     - os: linux
       env: TARGET=x86_64-unknown-linux-musl
-    - os: linux
-      env: TARGET=i686-unknown-linux-musl
 
 before_script: rustup target add $TARGET || echo ok
 script:
