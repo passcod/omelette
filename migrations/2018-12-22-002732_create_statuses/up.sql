@@ -42,7 +42,7 @@ COMMENT ON COLUMN statuses.geolocation_lon IS 'Longitude in WGS84';
 COMMENT ON COLUMN statuses.posted_at IS 'As reported by the source';
 COMMENT ON COLUMN statuses.fetched_at IS 'When Omelette retrieved this status';
 COMMENT ON COLUMN statuses.fetched_via IS 'Intermediary from whom this status was retrieved';
-COMMENT ON COLUMN statuses.deleted_at IS 'When Omelette deleted this status from its source';
+COMMENT ON COLUMN statuses.deleted_at IS 'When Omelette deleted (or unreposted) this status from its source';
 COMMENT ON COLUMN statuses.is_repost IS 'Retweets, boosts, etc done by me';
 COMMENT ON COLUMN statuses.reposted_at IS 'When this status was reposted';
 COMMENT ON COLUMN statuses.is_marked IS 'Likes, favourites, etc done by me';

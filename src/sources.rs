@@ -1,8 +1,10 @@
+use chrono::Utc;
 use crate::inserts::{NewEntity, NewStatus};
 use crate::models::Status;
 use crate::types::Source;
-use diesel::prelude::*;
-use egg_mode::{tweet::user_timeline, user::UserID, KeyPair, Token};
+use diesel::{prelude::*, result::Error as DieselError};
+use egg_mode::tweet::{delete, unretweet, user_timeline};
+use egg_mode::{error::Error as EggError, user::UserID, KeyPair, Token};
 use std::collections::HashMap;
 use std::env;
 use tokio::runtime::current_thread::block_on_all;
@@ -175,29 +177,56 @@ impl Twitter {
             "some duplicates"
         };
 
-        println!("Inserted {} new tweets in DB ({}) and {} entities", inserted_len, hint, entitied);
+        println!(
+            "Inserted {} new tweets in DB ({}) and {} entities",
+            inserted_len, hint, entitied
+        );
     }
 
     pub fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError> {
-        if status.deleted_at.is_some() { return Err(DeleteError::AlreadyDone); }
-        if status.source != Source::Twitter { return Err(DeleteError::WrongSource); }
-
-        if status.is_repost {
-            // unretweet
-            Err(DeleteError::Unimplemented)
-        } else if status.is_marked {
-            // TODO - unmark
-            Err(DeleteError::Unimplemented)
-        } else {
-            // delete
-            Err(DeleteError::Unimplemented)
+        if status.deleted_at.is_some() {
+            return Err(DeleteError::AlreadyDone);
         }
+        if status.source != Source::Twitter {
+            return Err(DeleteError::WrongSource);
+        }
+
+        let id: u64 = status.source_id.parse().expect("Can’t parse source ID");
+
+        block_on_all(if status.is_repost {
+            unretweet(id, &self.token)
+        } else {
+            delete(id, &self.token)
+        })?;
+
+        {
+            use crate::schema::statuses::dsl::*;
+            diesel::update(statuses.find(status.id))
+                .set(deleted_at.eq(Utc::now()))
+                .execute(conn)?;
+        }
+
+        Ok(())
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug)]
 pub enum DeleteError {
     AlreadyDone,
     WrongSource,
     Unimplemented,
+    Database(DieselError),
+    Twitter(EggError),
+}
+
+impl From<DieselError> for DeleteError {
+    fn from(err: DieselError) -> DeleteError {
+        DeleteError::Database(err)
+    }
+}
+
+impl From<EggError> for DeleteError {
+    fn from(err: EggError) -> DeleteError {
+        DeleteError::Twitter(err)
+    }
 }
