@@ -1,4 +1,5 @@
 use crate::inserts::{NewEntity, NewStatus};
+use crate::models::Status;
 use diesel::prelude::*;
 use egg_mode::{tweet::user_timeline, user::UserID, KeyPair, Token};
 use std::collections::HashMap;
@@ -154,4 +155,27 @@ impl Twitter {
 
         println!("Inserted {} new tweets in DB ({})", inserted, hint);
     }
+
+    pub fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError> {
+        if status.deleted_at.is_some() { return Err(DeleteError::AlreadyDone); }
+        if status.source != Source::Twitter { return Err(DeleteError::WrongSource); }
+
+        if status.is_repost {
+            // unretweet
+            Err(DeleteError::Unimplemented)
+        } else if status.is_marked {
+            // TODO - unmark
+            Err(DeleteError::Unimplemented)
+        } else {
+            // delete
+            Err(DeleteError::Unimplemented)
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DeleteError {
+    AlreadyDone,
+    WrongSource,
+    Unimplemented,
 }
