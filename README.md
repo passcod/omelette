@@ -25,6 +25,8 @@ Omelette is a collection of small tools:
 
  - `omelette-delete` processes deletions requests.
 
+ - `omelette-migrate-db` prepares the database.
+
  - `omelette-mediatise` retrieves media content from entities and stores it all
    locally, so you can also archive/backup all photos, videos, GIFs, etc.
 
@@ -61,6 +63,12 @@ any of a number of services, like this one: https://tweeterid.com/
 
 ```
 TWITTER_USER_ID=
+```
+
+At the first run, and after upgrades, you’ll need to set up the database:
+
+```bash
+omelette-migrate-db
 ```
 
 And finally, run omelette:
