@@ -1,6 +1,6 @@
 use egg_mode::entities::MediaType as EggMediaType;
 
-#[derive(Debug, DbEnum)]
+#[derive(Clone, Debug, DbEnum, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[PgType = "source_t"]
 #[DieselType = "Source_t"]
 pub enum Source {
@@ -10,7 +10,7 @@ pub enum Source {
     MastodonSocial,
 }
 
-#[derive(Debug, DbEnum)]
+#[derive(Clone, Debug, DbEnum, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[PgType = "intermediary_source_t"]
 #[DieselType = "Intermediary_source_t"]
 pub enum IntermediarySource {
@@ -18,7 +18,7 @@ pub enum IntermediarySource {
     TwitterArchive,
 }
 
-#[derive(Debug, DbEnum)]
+#[derive(Clone, Debug, DbEnum, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[PgType = "media_type_t"]
 #[DieselType = "Media_type_t"]
 pub enum MediaType {

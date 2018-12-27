@@ -7,7 +7,7 @@ use egg_mode::{
     entities::MediaEntity, tweet::{ExtendedTweetEntities, Tweet},
 };
 
-#[derive(Debug, Insertable)]
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
 #[table_name = "statuses"]
 pub struct NewStatus {
     pub text: String,
@@ -105,7 +105,7 @@ impl From<&Tweet> for NewStatus {
     }
 }
 
-#[derive(Debug, Insertable)]
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
 #[table_name = "entities"]
 pub struct NewEntity {
     pub fetched_at: DateTime<Utc>,
@@ -163,7 +163,6 @@ impl NewEntity {
             .enumerate()
             .map(|(i, ent)| {
                 let mut new_ent: NewEntity = ent.into();
-                println!("Entity: {:?}", new_ent);
                 new_ent.ordering = Some(i as i32);
                 new_ent
             })

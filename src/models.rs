@@ -5,7 +5,7 @@ use crate::schema::{entities, statuses};
 use crate::types::*;
 use diesel::sql_types::*;
 
-#[derive(Debug, Queryable, Insertable)]
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd, Queryable)]
 #[table_name = "statuses"]
 pub struct Status {
     pub id: i32,
@@ -31,7 +31,7 @@ pub struct Status {
     pub public: bool,
 }
 
-#[derive(Debug, Queryable, Insertable)]
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd, Queryable)]
 #[table_name = "entities"]
 pub struct Entity {
     pub id: i32,

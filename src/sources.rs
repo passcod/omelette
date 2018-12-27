@@ -11,6 +11,7 @@ macro_rules! expect_env {
     };
 }
 
+#[derive(Clone, Debug)]
 pub struct Twitter {
     token: Token,
     id: UserID<'static>,
