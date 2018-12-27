@@ -26,3 +26,7 @@ version = "0.4.4"
 
 [dependencies.egg-mode]
 git = "https://github.com/QuietMisdreavus/twitter-rs"
+
+[target.'cfg(target_env="musl")'.dependencies.openssl]
+features = ["vendored"]
+version = "0.10.11"
