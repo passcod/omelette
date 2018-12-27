@@ -1,5 +1,6 @@
 use crate::inserts::{NewEntity, NewStatus};
 use crate::models::Status;
+use crate::types::Source;
 use diesel::prelude::*;
 use egg_mode::{tweet::user_timeline, user::UserID, KeyPair, Token};
 use std::collections::HashMap;
@@ -46,7 +47,6 @@ impl Twitter {
     fn latest_2_ids_in_db(conn: &PgConnection) -> (Option<u64>, Option<u64>) {
         use crate::models::{pg_repeat, pg_to_number};
         use crate::schema::statuses::dsl::*;
-        use crate::types::Source;
 
         let mut ids: Vec<u64> = statuses.select(source_id)
             .filter(source.eq(Source::Twitter))
@@ -133,27 +133,49 @@ impl Twitter {
             statusbag.len()
         );
 
-        use crate::schema::statuses::dsl::*;
         use diesel::insert_into;
 
-        let inserted = insert_into(statuses)
-            .values(&statusbag)
-            .on_conflict(source_id)
-            .do_nothing()
-            .execute(conn)
-            .expect("Failed to insert tweets in db");
+        let inserted_tweets: Vec<Status> = {
+            use crate::schema::statuses::dsl::*;
+            insert_into(statuses)
+                .values(&statusbag)
+                .on_conflict(source_id)
+                .do_nothing()
+                .get_results(conn)
+                .expect("Failed to insert tweets in db")
+        };
 
-        // process and associate entitybag
+        let inserted_len = inserted_tweets.len();
 
-        let hint = if inserted == statusbag.len() - 1 {
+        let mut entitysack = Vec::with_capacity(entitybag.len() * 4);
+        for inserted in &inserted_tweets {
+            if let Some(ents) = entitybag.remove(&inserted.source_id) {
+                for mut ent in ents.into_iter() {
+                    ent.status_id = inserted.id;
+                    entitysack.push(ent);
+                }
+            }
+        }
+
+        let entitied = {
+            use crate::schema::entities::dsl::*;
+            insert_into(entities)
+                .values(&entitysack)
+                .on_conflict(source_id)
+                .do_nothing()
+                .execute(conn)
+                .expect("Failed to insert entity metadata in db")
+        };
+
+        let hint = if inserted_len == statusbag.len() - 1 {
             "as expected"
-        } else if inserted >= statusbag.len() {
+        } else if inserted_len >= statusbag.len() {
             "something’s odd" // likely some tweet(s) deleted from timeline directly
         } else {
             "some duplicates"
         };
 
-        println!("Inserted {} new tweets in DB ({})", inserted, hint);
+        println!("Inserted {} new tweets in DB ({}) and {} entities", inserted_len, hint, entitied);
     }
 
     pub fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError> {
