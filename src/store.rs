@@ -47,7 +47,7 @@ pub fn sync(conn: &PgConnection, path: &Path) {
         };
     }
 
-    println!("Successfully downloaded {} (out of {}) entities", successes, todo.len());
+    println!("\nSuccessfully downloaded {} (out of {}) entities", successes, todo.len());
 }
 
 fn write_hash(conn: &PgConnection, entity: &Entity, hash: &String) -> Result<(), DieselError> {
