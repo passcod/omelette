@@ -55,7 +55,7 @@ pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
     for (delete, status) in &deletes {
         if let Some(source) = sources.get(&status.source) {
             match mode {
-                ActionMode::DryRun => println!("DRY RUN: would delete status: {:?}", status),
+                ActionMode::DryRun => println!("\nDRY RUN: would delete status: {:?}", status),
                 ActionMode::Interactive => {
                     println!(
                         "Request to delete {:?} status {} (internal id {}) from {}\n“{}” — {}",
@@ -107,7 +107,7 @@ Delete status {}? ",
         }
     }
 
-    println!("{} successful deletes performed", successes);
+    println!("\n{} successful deletes performed", successes);
 }
 
 fn one_delete(
