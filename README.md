@@ -16,24 +16,26 @@ deleting my entire history up to a point, and then keep deleting as I keep
 tweeting, essentially keeping me with a set amount of history, like 6 months or
 something, and archiving the rest.
 
-However, that’s all future plans. For now, this tool does three things:
+## so that’s the story. what does this do?
 
-1. it stores a copy of all your own tweets, or as far as it sees them, in a
-   PostgreSQL database.
+Omelette is a collection of small tools:
 
-2. it retrieves media and processes deletion queues.
+ - `omelette-sync` fetches and stores a copy of all your own tweets, or as far
+   as it sees them, plus media entity metadata, in a PostgreSQL database.
 
-3. it uses that database to parse for `#cleanup` requests and figure out what it
-   should delete from that.
+ - `omelette-delete` processes deletions requests.
 
-After all, once I have a database of all the stuff I tweet, figuring out what
-the threads look like is super simple. And then all that's needed is to issue
-some deletion requests to a bunch of IDs, job done.
+ - `omelette-mediatise` retrieves media content from entities and stores it all
+   locally, so you can also archive/backup all photos, videos, GIFs, etc.
 
-Additionally, with this system, other behaviours can be bolted on easily through
-external tools and scripts that consume and write to the database.
+ - `omelette-cleanup` parses the database for `#cleanup` requests and figures
+   out which tweets and threads to request deletion for.
 
-## so that’s the story. how do i run one?
+You can bolt on additional behaviour simply by running a script or tool of your
+own that reads statuses from and writes deletion requests to the database.
+Please contribute useful tools back to this repo!
+
+## how do i run it?
 
 Like all twitter bots, this needs keys. It’s to be used only in a personal
 capacity, so there’s no need to do lots of OAuth. Just sign up for an app, get
@@ -61,7 +63,14 @@ any of a number of services, like this one: https://tweeterid.com/
 TWITTER_USER_ID=
 ```
 
-And finally, run omelette.
+And finally, run omelette:
+
+```bash
+omelette-sync &&\
+omelette-mediatise &&\
+omelette-cleanup &&\
+omelette-delete --dry-run
+```
 
 ## …which i install how?
 
@@ -75,11 +84,11 @@ If you don’t, or you prefer a binary, head on over to [the releases tab].
 
 Yeah.
 
-Run it with `--dry-run` for a few days or weeks before trusting it to do the
-right thing. You can run it in `--interactive` mode once in a while during that
-time to get prompted before deleting each tweet.
-
 Pass the `--dotenv` flag to load from a `.env` file in the current directory.
+
+Run `omelette-delete` with `--dry-run` for a few days or weeks before trusting
+it to do the right thing. You can run it in `--interactive` mode once in a while
+during that time to get prompted before deleting each tweet.
 
 Every time there’s an update to omelette, do that again. There's no undo, no way
 to insert tweets back where they were again, so be careful with it.
@@ -88,7 +97,7 @@ Omelette is designed to be run at intervals, it's not a daemon. Use a cron or a
 systemd timer to keep it going.
 
 If you don’t tweet much, you don’t need to run it as much. But if you tweet lots,
-you'll need to run it more often. When it runs, it will tell you how many calls
+you'll need to run it more often. When it syncs, it will tell you how many calls
 it had to make to the Twitter API to go however far back as it needed to pull
 down your tweet history since it last ran. You want to get it so that it does
 one call every time it runs, and no more than that. Give yourself some margin to
