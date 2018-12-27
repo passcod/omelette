@@ -27,4 +27,5 @@ fn main() {
 
     let db = omelette::connect();
     embedded_migrations::run_with_output(&db, &mut std::io::stdout()).unwrap();
+    println!("Database is ready");
 }
