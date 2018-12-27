@@ -28,6 +28,7 @@ table! {
         source_url -> Text,
         original_status_source_id -> Nullable<Text>,
         original_status_source_url -> Nullable<Text>,
+        blob_hash -> Nullable<Text>,
     }
 }
 

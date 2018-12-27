@@ -11,6 +11,7 @@ pub mod inserts;
 pub mod models;
 pub mod schema;
 pub mod sources;
+pub mod store;
 pub mod types;
 
 pub fn connect() -> PgConnection {

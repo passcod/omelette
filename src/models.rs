@@ -44,6 +44,7 @@ pub struct Entity {
     pub source_url: String,
     pub original_status_source_id: Option<String>,
     pub original_status_source_url: Option<String>,
+    pub blob_hash: Option<String>,
 }
 
 #[derive(Associations, Clone, Debug, Identifiable, Insertable, PartialEq, PartialOrd, Queryable)]
