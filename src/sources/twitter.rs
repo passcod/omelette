@@ -2,18 +2,13 @@ use chrono::Utc;
 use crate::inserts::{NewEntity, NewStatus};
 use crate::models::Status;
 use crate::types::Source;
-use diesel::{prelude::*, result::Error as DieselError};
+use crate::sources::{DeleteError, LoadError, StatusSource};
+use diesel::prelude::*;
 use egg_mode::tweet::{delete, unretweet, user_timeline};
-use egg_mode::{error::Error as EggError, user::UserID, KeyPair, Token};
+use egg_mode::{user::UserID, KeyPair, Token};
 use std::collections::HashMap;
 use std::env;
 use tokio::runtime::current_thread::block_on_all;
-
-macro_rules! expect_env {
-    ($name:expr) => {
-        env::var($name).expect(&format!("{} must be set", $name))
-    };
-}
 
 #[derive(Clone, Debug)]
 pub struct Twitter {
@@ -22,28 +17,28 @@ pub struct Twitter {
 }
 
 impl Twitter {
-    pub fn load() -> Self {
+    pub fn load() -> Result<Box<StatusSource>, LoadError> {
         let con_token = KeyPair::new(
-            expect_env!("TWITTER_CONSUMER_KEY"),
-            expect_env!("TWITTER_CONSUMER_SECRET"),
+            env::var("TWITTER_CONSUMER_KEY")?,
+            env::var("TWITTER_CONSUMER_SECRET")?,
         );
         let access_token = KeyPair::new(
-            expect_env!("TWITTER_ACCESS_TOKEN_KEY"),
-            expect_env!("TWITTER_ACCESS_TOKEN_SECRET"),
+            env::var("TWITTER_ACCESS_TOKEN_KEY")?,
+            env::var("TWITTER_ACCESS_TOKEN_SECRET")?,
         );
         let token = Token::Access {
             consumer: con_token,
             access: access_token,
         };
 
-        let uid: u64 = expect_env!("TWITTER_USER_ID")
+        let uid: u64 = env::var("TWITTER_USER_ID")?
             .parse()
             .expect("TWITTER_USER_ID must be u64");
 
-        Self {
+        Ok(Box::new(Self {
             token,
             id: uid.into(),
-        }
+        }))
     }
 
     fn latest_2_ids_in_db(conn: &PgConnection) -> (Option<u64>, Option<u64>) {
@@ -66,7 +61,10 @@ impl Twitter {
         (ids.pop(), ids.pop())
         // penultimate, latest
     }
+}
 
+
+impl StatusSource for Twitter {
     /*
     200
     --- <-- if latest is not in packet, cursor down next page
@@ -82,7 +80,7 @@ impl Twitter {
     penultimate <-- what we request with
     */
 
-    pub fn sync(&self, conn: &PgConnection) {
+    fn sync(&self, conn: &PgConnection) {
         let (penultimate, latest) = Self::latest_2_ids_in_db(conn);
         let latest = latest.or(penultimate).unwrap_or(0);
         println!("Latest twitter ID we have:\t\t{}", latest);
@@ -183,7 +181,7 @@ impl Twitter {
         );
     }
 
-    pub fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError> {
+    fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError> {
         if status.deleted_at.is_some() {
             return Err(DeleteError::AlreadyDone);
         }
@@ -207,26 +205,5 @@ impl Twitter {
         }
 
         Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub enum DeleteError {
-    AlreadyDone,
-    WrongSource,
-    Unimplemented,
-    Database(DieselError),
-    Twitter(EggError),
-}
-
-impl From<DieselError> for DeleteError {
-    fn from(err: DieselError) -> DeleteError {
-        DeleteError::Database(err)
-    }
-}
-
-impl From<EggError> for DeleteError {
-    fn from(err: EggError) -> DeleteError {
-        DeleteError::Twitter(err)
     }
 }
