@@ -96,7 +96,7 @@ impl From<&Tweet> for NewStatus {
             public: if let Some(ref user) = otweet.user {
                 !user.protected
             } else {
-                warn!(
+                println!(
                     "Cannot know whether tweet {:?} is public, defaulting to false",
                     otweet
                 );

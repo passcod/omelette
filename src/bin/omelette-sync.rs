@@ -1,7 +1,3 @@
-extern crate dotenv;
-extern crate omelette;
-extern crate structopt;
-
 use dotenv::dotenv;
 use omelette::sources::all_available;
 use structopt::StructOpt;

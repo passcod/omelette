@@ -1,8 +1,5 @@
 #[macro_use]
 extern crate diesel_migrations;
-extern crate dotenv;
-extern crate omelette;
-extern crate structopt;
 
 use dotenv::dotenv;
 use structopt::StructOpt;

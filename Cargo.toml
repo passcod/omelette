@@ -1,14 +1,13 @@
 [package]
 authors = ["Félix Saparelli <felix@passcod.name>"]
+edition = "2018"
 name = "omelette"
 version = "0.1.0"
-edition = "2018"
 
 [dependencies]
 chrono = "0.4.6"
 dotenv = "0.9.0"
 egg-mode-text = "1.14.7"
-log = "0.4.6"
 structopt = "0.2.14"
 tokio = "0.1.13"
 
@@ -16,13 +15,13 @@ tokio = "0.1.13"
 features = ["chrono", "postgres"]
 version = "1.3.3"
 
-[dependencies.diesel_migrations]
-features = ["postgres"]
-version = "1.3.0"
-
 [dependencies.diesel-derive-enum]
 features = ["postgres"]
 version = "0.4.4"
+
+[dependencies.diesel_migrations]
+features = ["postgres"]
+version = "1.3.0"
 
 [dependencies.egg-mode]
 git = "https://github.com/QuietMisdreavus/twitter-rs"

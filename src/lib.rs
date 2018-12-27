@@ -1,13 +1,7 @@
-extern crate chrono;
 #[macro_use]
 extern crate diesel;
 #[macro_use]
 extern crate diesel_derive_enum;
-extern crate egg_mode;
-extern crate egg_mode_text;
-#[macro_use]
-extern crate log;
-extern crate tokio;
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
