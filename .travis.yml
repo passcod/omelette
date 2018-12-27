@@ -16,17 +16,10 @@ env:
 
 matrix:
   include:
-    # Default test+release versions
-    - os: windows
-      env: TARGET=x86_64-pc-windows-msvc
     - os: osx
       env: TARGET=x86_64-apple-darwin
     - os: linux
       env: TARGET=x86_64-unknown-linux-gnu
-
-    # Extra targets, also released
-    - os: windows
-      env: TARGET=x86_64-pc-windows-gnu
     - os: linux
       env: TARGET=x86_64-unknown-linux-musl
 
