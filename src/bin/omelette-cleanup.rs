@@ -161,7 +161,6 @@ fn own_parent(db: &PgConnection, twitter_uid: &u64, status: &Status) -> Threadin
         .filter(source.eq(&status.source))
         .filter(source_author.like(&format!("% ({})", twitter_uid)))
         .filter(source_id.eq(parent_id))
-        .limit(1)
         .load(db)
         .expect("Cannot search statuses");
 
@@ -169,18 +168,21 @@ fn own_parent(db: &PgConnection, twitter_uid: &u64, status: &Status) -> Threadin
         return Threading::Stop;
     }
 
-    let (stat, ent) = requests.first().unwrap();
+    let mut s = None;
+    for (stat, ent) in &requests {
+        if s.is_none() { s = Some(stat); }
 
-    if let Some(entity) = ent {
-        if entity.blob_hash.is_none() {
-            println!(
-                "Status has thin entities, skipping thread: {:?} {} (#{})\n“{}” — {}",
-                stat.source, stat.source_id, stat.id, stat.text, stat.posted_at
-            );
+        if let Some(entity) = ent {
+            if entity.blob_hash.is_none() {
+                println!(
+                    "Status has thin entities, skipping thread: {:?} {} (#{})\n“{}” — {}",
+                    stat.source, stat.source_id, stat.id, stat.text, stat.posted_at
+                );
 
-            return Threading::Abort;
+                return Threading::Abort;
+            }
         }
     }
 
-    Threading::Parent(stat.clone())
+    Threading::Parent(s.unwrap().clone())
 }
