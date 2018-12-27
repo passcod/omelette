@@ -3,6 +3,19 @@
 
 table! {
     use diesel::sql_types::*;
+
+    deletions (id) {
+        id -> Int4,
+        status_id -> Int4,
+        created_at -> Timestamptz,
+        not_before -> Timestamptz,
+        executed_at -> Nullable<Timestamptz>,
+        sponsor -> Text,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
     use crate::types::*;
 
     entities (id) {
@@ -50,6 +63,7 @@ table! {
 joinable!(entities -> statuses (status_id));
 
 allow_tables_to_appear_in_same_query!(
+    deletions,
     entities,
     statuses,
 );

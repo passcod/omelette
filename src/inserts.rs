@@ -1,7 +1,8 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
 use chrono::prelude::*;
-use crate::schema::{entities, statuses};
+use crate::models::Status;
+use crate::schema::*;
 use crate::types::*;
 use egg_mode::{
     entities::MediaEntity, tweet::{ExtendedTweetEntities, Tweet},
@@ -167,5 +168,21 @@ impl NewEntity {
                 new_ent
             })
             .collect()
+    }
+}
+
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
+#[table_name = "deletions"]
+pub struct NewDeletion {
+    pub status_id: i32,
+    pub sponsor: String,
+}
+
+impl NewDeletion {
+    fn from_status(status: &Status) -> Self {
+        Self {
+            status_id: status.id,
+            sponsor: "omelette".into(),
+        }
     }
 }

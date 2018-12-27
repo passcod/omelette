@@ -1,7 +1,7 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
 use chrono::prelude::*;
-use crate::schema::{entities, statuses};
+use crate::schema::*;
 use crate::types::*;
 use diesel::sql_types::*;
 
@@ -43,6 +43,17 @@ pub struct Entity {
     pub source_url: String,
     pub original_status_source_id: Option<String>,
     pub original_status_source_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd, Queryable)]
+#[table_name = "deletions"]
+pub struct Deletion {
+    pub id: i32,
+    pub status_id: i32,
+    pub created_at: DateTime<Utc>,
+    pub not_before: DateTime<Utc>,
+    pub executed_at: Option<DateTime<Utc>>,
+    pub sponsor: String,
 }
 
 sql_function!(#[sql_name="repeat"] fn pg_repeat(t: Text, n: Int4) -> Text);
