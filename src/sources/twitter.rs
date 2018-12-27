@@ -130,6 +130,8 @@ impl StatusSource for Twitter {
             }
         }
 
+        statusbag.reverse();
+
         println!(
             "Made {} calls to twitter and retrieved {} tweets",
             batch,
@@ -159,6 +161,8 @@ impl StatusSource for Twitter {
                 }
             }
         }
+
+        entitysack.reverse();
 
         let entitied = {
             use crate::schema::entities::dsl::*;
