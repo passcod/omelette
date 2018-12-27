@@ -79,6 +79,8 @@ Run it with `--dry-run` for a few days or weeks before trusting it to do the
 right thing. You can run it in `--interactive` mode once in a while during that
 time to get prompted before deleting each tweet.
 
+Pass the `--dotenv` flag to load from a `.env` file in the current directory.
+
 Every time there’s an update to omelette, do that again. There's no undo, no way
 to insert tweets back where they were again, so be careful with it.
 
