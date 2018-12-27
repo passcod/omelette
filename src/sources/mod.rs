@@ -2,8 +2,9 @@ use crate::models::{Deletion, Status};
 use crate::types::Source;
 use diesel::{pg::PgConnection, result::Error as DieselError};
 use egg_mode::error::Error as EggError;
-use std::collections::HashMap;
-use std::env::VarError;
+use std::{
+    collections::HashMap, env::VarError, io::{self, Write},
+};
 
 pub mod twitter;
 
@@ -55,34 +56,50 @@ pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
         if let Some(source) = sources.get(&status.source) {
             match mode {
                 ActionMode::DryRun => println!("DRY RUN: would delete status: {:?}", status),
-                ActionMode::Interactive => unimplemented!(),
-                ActionMode::Auto => {
+                ActionMode::Interactive => {
                     println!(
-                        "Deleting {:?} status {} (internal id {}) on request from {}",
-                        status.source, status.source_id, status.id, delete.sponsor
+                        "Request to delete {:?} status {} (internal id {}) from {}\n“{}” — {}",
+                        status.source, status.source_id, status.id, delete.sponsor, status.text, status.posted_at
                     );
-                    if let Err(err) = source.delete(conn, &status) {
-                        println!("Could not delete status: {:?}", err);
 
-                        if let DeleteError::AlreadyDone = err {
-                            diesel::update(deletions.find(delete.id))
-                                .set(executed_at.eq(Utc::now()))
-                                .execute(conn)
-                                .expect(&format!(
-                                    "Failed to record deletion status for #{}",
-                                    delete.id
-                                ));
-                        }
-                    } else {
-                        successes += 1;
-                        diesel::update(deletions.find(delete.id))
-                            .set(executed_at.eq(Utc::now()))
-                            .execute(conn)
-                            .expect(&format!(
-                                "Failed to record deletion success for #{}",
-                                delete.id
-                            ));
+                    print!(
+                        "
+To delete now, type 'delete' or 'd'.
+To dump the status, type 'show' or '?'.
+To skip, type anything else or just press enter.
+To exit, use Ctrl-C.
+
+Delete status {}? ",
+                        123
+                    );
+
+                    io::stdout().flush().unwrap();
+
+                    let mut nline = String::with_capacity(7);
+                    io::stdin()
+                        .read_line(&mut nline)
+                        .expect("Could not grab input");
+                    let mut command = nline.trim();
+
+                    if command == "show" || command == "?" {
+                        print!("\n{:?}\n\nDelete status? ", status);
+                        io::stdout().flush().unwrap();
+
+                        nline.truncate(0);
+                        io::stdin()
+                            .read_line(&mut nline)
+                            .expect("Could not grab input");
+                        command = nline.trim();
                     }
+
+                    if command == "delete" || command == "d" {
+                        successes += one_delete(source, conn, status, delete);
+                    }
+
+                    println!("");
+                }
+                ActionMode::Auto => {
+                    successes += one_delete(source, conn, status, delete);
                 }
             };
         } else {
@@ -91,6 +108,44 @@ pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
     }
 
     println!("{} successful deletes performed", successes);
+}
+
+fn one_delete(
+    source: &Box<StatusSource>,
+    conn: &PgConnection,
+    status: &Status,
+    delete: &Deletion,
+) -> usize {
+    use chrono::Utc;
+    use crate::schema::deletions::dsl::*;
+    use diesel::prelude::*;
+
+    println!(
+        "Deleting {:?} status {} (internal id {}) on request from {}",
+        status.source, status.source_id, status.id, delete.sponsor
+    );
+
+    let record = diesel::update(deletions.find(delete.id)).set(executed_at.eq(Utc::now()));
+
+    if let Err(err) = source.delete(conn, &status) {
+        println!("Could not delete status: {:?}", err);
+
+        if let DeleteError::AlreadyDone = err {
+            record.execute(conn).expect(&format!(
+                "Failed to record deletion status for #{}",
+                delete.id
+            ));
+        }
+
+        0
+    } else {
+        record.execute(conn).expect(&format!(
+            "Failed to record deletion success for #{}",
+            delete.id
+        ));
+
+        1
+    }
 }
 
 #[derive(Clone, Debug)]

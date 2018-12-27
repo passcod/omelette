@@ -19,5 +19,5 @@ fn main() {
         source.sync(&db);
     }
 
-    run_deletes(&sources, &db, ActionMode::Auto);
+    run_deletes(&sources, &db, ActionMode::Interactive);
 }
