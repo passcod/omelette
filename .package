@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+
+### Args
+
+tag=$1
+target=$2
+
+if [[ -z "$tag" ]]; then
+    echo Tag is needed
+    exit 1
+fi
+
+if [[ -z "$target" ]]; then
+    echo Target is needed
+    exit 1
+fi
+
+### Vars
+
+ext=""
+windows=""
+if [[ "$target" == *"windows"* ]]; then
+    choco install 7zip
+    ext=".exe"
+    windows="1"
+fi
+
+project="omelette"
+bins="delete migrate-db sync"
+build_dir=$(mktemp -d 2>/dev/null || mktemp -d -t tmp)
+out_dir=$(pwd)
+name="$project-$tag-$target"
+
+### Build
+
+cargo build --target $target --release
+
+### Decorate
+
+mkdir "$build_dir/$name"
+for bin in $bins; do
+    cp "target/$target/release/$project-delete$ext" "$build_dir/$name/"
+done
+cp LICENSE "$build_dir/$name/"
+ls -shal "$build_dir/$name/"
+
+### Strip
+
+cd "$build_dir"
+for bin in $bins; do
+    strip "$name/$project-delete$ext"
+done
+ls -shal "$name/"
+
+### Pack
+
+if [[ -z "$windows" ]]; then
+    tar cvf "$out_dir/$name.tar" "$name"
+    cd "$out_dir"
+    xz -f9 "$name.tar"
+else
+    7z a "$out_dir/$name.zip" "$name"
+fi
+
+### Debify
+
+if [[ "$target" == "x86_64-unknown-linux-gnu" ]]; then
+    mkdir -p "$build_dir/deb/$name"
+    cd "$build_dir/deb/$name"
+
+    mkdir -p DEBIAN usr/bin
+    cp "../../$name/$project" usr/bin/
+    cat <<CONTROL > DEBIAN/control
+Package: $project
+Version: ${tag/v/}
+Architecture: amd64
+Maintainer: Félix Saparelli <aur@passcod.name>
+Installed-Size: $(du -d1 usr | tail -n1 | cut -d\t -f1)
+Homepage: https://github.com/passcod/$project
+Description: Your personal archiver and deleter for social media.
+ A collection of tools to archive and cleanup tweets, toots, etc.
+CONTROL
+	cd ..
+	fakeroot dpkg -b "$name"
+	mv "$name.deb" "$out_dir/"
+fi
+
+ls -shal "$out_dir/"
