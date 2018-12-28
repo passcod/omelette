@@ -20,8 +20,8 @@ something, and archiving the rest.
 
 Omelette is a collection of small tools:
 
- - `omelette-sync` fetches and stores a copy of all your own tweets, or as far
-   as it sees them, plus media entity metadata, in a PostgreSQL database.
+ - `omelette-sync` fetches from the Twitter API and stores a copy of all your
+   own tweets, or as far as it sees them, plus media entity metadata.
 
  - `omelette-delete` processes deletions requests.
 
@@ -32,6 +32,10 @@ Omelette is a collection of small tools:
 
  - `omelette-cleanup` parses the database for `#cleanup` requests and figures
    out which tweets and threads to request deletion for.
+
+ - `omelette-import-twitter-archive` imports tweets from a Twitter Archive file,
+   either directly from the zip or from the extracted `tweets.csv`, then returns
+   to the Twitter API to fill in the details (the archive data is very sparse).
 
 You can bolt on additional behaviour simply by running a script or tool of your
 own that reads statuses from and writes deletion requests to the database.
