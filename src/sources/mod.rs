@@ -42,23 +42,23 @@ pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
         .filter(not_before.lt(Utc::now()))
         .order_by(not_before)
         .load(conn)
-        .expect("Cannot load deletions from DB");
+        .expect("!! Cannot load deletions from DB");
 
     if deletes.is_empty() {
-        println!("No deletion requests ready, skip.");
+        println!("!! No deletion requests ready, skip.");
         return;
     }
 
-    println!("{} deletion requests ready for action", deletes.len());
+    println!("=> {} deletion requests ready for action", deletes.len());
 
     let mut successes = 0;
     for (delete, status) in &deletes {
         if let Some(source) = sources.get(&status.source) {
             match mode {
-                ActionMode::DryRun => println!("\nDRY RUN: would delete status: {:?}", status),
+                ActionMode::DryRun => println!("\n-> DRY RUN: would delete status: {:?}", status),
                 ActionMode::Interactive => {
                     println!(
-                        "Request to delete {:?} status {} (internal id {}) from {}\n“{}” — {}",
+                        "-> Request to delete {:?} status {} (internal id {}) from {}\n“{}” — {}",
                         status.source, status.source_id, status.id, delete.sponsor, status.text, status.posted_at
                     );
 
@@ -78,7 +78,7 @@ Delete status {}? ",
                     let mut nline = String::with_capacity(7);
                     io::stdin()
                         .read_line(&mut nline)
-                        .expect("Could not grab input");
+                        .expect("!! Could not grab input");
                     let mut command = nline.trim();
 
                     if command == "show" || command == "?" {
@@ -88,7 +88,7 @@ Delete status {}? ",
                         nline.truncate(0);
                         io::stdin()
                             .read_line(&mut nline)
-                            .expect("Could not grab input");
+                            .expect("!! Could not grab input");
                         command = nline.trim();
                     }
 
@@ -103,11 +103,11 @@ Delete status {}? ",
                 }
             };
         } else {
-            println!("No source available for deletion #{}", delete.id);
+            println!("!! No source available for deletion #{}", delete.id);
         }
     }
 
-    println!("\n{} successful deletes performed", successes);
+    println!("\n=> {} successful deletes performed", successes);
 }
 
 fn one_delete(
@@ -121,18 +121,18 @@ fn one_delete(
     use diesel::prelude::*;
 
     println!(
-        "Deleting {:?} status {} (internal id {}) on request from {}",
+        "-> Deleting {:?} status {} (internal id {}) on request from {}",
         status.source, status.source_id, status.id, delete.sponsor
     );
 
     let record = diesel::update(deletions.find(delete.id)).set(executed_at.eq(Utc::now()));
 
     if let Err(err) = source.delete(conn, &status) {
-        println!("Could not delete status: {:?}", err);
+        println!("!! Could not delete status: {:?}", err);
 
         if let DeleteError::AlreadyDone = err {
             record.execute(conn).expect(&format!(
-                "Failed to record deletion status for #{}",
+                "!! Failed to record deletion status for #{}",
                 delete.id
             ));
         }
@@ -140,7 +140,7 @@ fn one_delete(
         0
     } else {
         record.execute(conn).expect(&format!(
-            "Failed to record deletion success for #{}",
+            "!! Failed to record deletion success for #{}",
             delete.id
         ));
 

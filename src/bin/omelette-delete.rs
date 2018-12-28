@@ -27,7 +27,7 @@ fn main() {
     }
 
     if opt.interactive && opt.dry_run {
-        println!("Cannot supply both --dry-run and --interactive");
+        println!("!! Cannot supply both --dry-run and --interactive");
         std::process::exit(1);
     }
 

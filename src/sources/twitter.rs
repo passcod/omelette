@@ -57,9 +57,9 @@ impl Twitter {
             .order_by(pg_to_number(source_id, pg_repeat("9", 25)).desc())
             .limit(2)
             .load::<String>(conn)
-            .expect("Can’t retrieve penultimate twitter source ID from db")
+            .expect("!! Can’t retrieve penultimate twitter source ID from db")
             .iter()
-            .map(|sid| sid.parse::<u64>().expect("Can’t parse twitter source ID"))
+            .map(|sid| sid.parse::<u64>().expect("!! Can’t parse twitter source ID"))
             .collect();
 
         (ids.pop(), ids.pop())
@@ -86,10 +86,10 @@ impl StatusSource for Twitter {
     fn sync(&self, conn: &PgConnection) {
         let (penultimate, latest) = Self::latest_2_ids_in_db(conn);
         let latest = latest.or(penultimate).unwrap_or(0);
-        println!("Latest twitter ID we have:\t\t{}", latest);
+        println!(":: Latest twitter ID we have:\t\t{}", latest);
         if penultimate.is_some() {
             println!(
-                "Penultimate twitter ID we have:\t\t{}",
+                ":: Penultimate twitter ID we have:\t{}",
                 penultimate.unwrap()
             );
         }
@@ -101,8 +101,8 @@ impl StatusSource for Twitter {
 
         loop {
             // Get tweets older than penultimate, which should include the *latest*
-            let (tl, feed) =
-                block_on_all(timeline.older(penultimate)).expect("can’t read twitter timeline");
+            let (tl, feed) = block_on_all(timeline.older(penultimate))
+                .expect("!! Can’t read twitter timeline");
             batch += 1;
             timeline = tl;
             let mut contains_latest = false;
@@ -121,7 +121,7 @@ impl StatusSource for Twitter {
             }
 
             println!(
-                "Batch {} ({} tweets) contains latest? {}",
+                "-> Batch {} ({} tweets) contains latest? {}",
                 batch, ntweets, contains_latest
             );
 
@@ -133,7 +133,7 @@ impl StatusSource for Twitter {
         statusbag.reverse();
 
         println!(
-            "Made {} calls to twitter and retrieved {} tweets",
+            "=> Made {} calls to twitter and retrieved {} tweets",
             batch,
             statusbag.len()
         );
@@ -147,7 +147,7 @@ impl StatusSource for Twitter {
                 .on_conflict(source_id)
                 .do_nothing()
                 .get_results(conn)
-                .expect("Failed to insert tweets in db")
+                .expect("!! Failed to insert tweets in db")
         };
 
         let inserted_len = inserted_tweets.len();
@@ -171,7 +171,7 @@ impl StatusSource for Twitter {
                 .on_conflict(source_id)
                 .do_nothing()
                 .execute(conn)
-                .expect("Failed to insert entity metadata in db")
+                .expect("!! Failed to insert entity metadata in db")
         };
 
         let hint = if inserted_len == statusbag.len() - 1 {
@@ -183,7 +183,7 @@ impl StatusSource for Twitter {
         };
 
         println!(
-            "Inserted {} new tweets in DB ({}) and {} entities",
+            "=> Inserted {} new tweets in DB ({}) and {} entities",
             inserted_len, hint, entitied
         );
     }
@@ -196,7 +196,10 @@ impl StatusSource for Twitter {
             return Err(DeleteError::WrongSource);
         }
 
-        let id: u64 = status.source_id.parse().expect("Can’t parse source ID");
+        let id: u64 = status
+            .source_id
+            .parse()
+            .expect("!! Can’t parse source ID");
 
         block_on_all(if status.is_repost {
             unretweet(id, &self.token)

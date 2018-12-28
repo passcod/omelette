@@ -27,9 +27,9 @@ fn main() {
     let db = omelette::connect();
 
     let twitter_uid: u64 = env::var("TWITTER_USER_ID")
-        .expect("TWITTER_USER_ID must be set")
+        .expect("!! TWITTER_USER_ID must be set")
         .parse()
-        .expect("TWITTER_USER_ID must be u64");
+        .expect("!! TWITTER_USER_ID must be u64");
 
     let requests: Vec<(Status, Option<Entity>)> = {
         use omelette::schema::entities;
@@ -42,13 +42,18 @@ fn main() {
             .filter(source_author.like(&format!("% ({})", twitter_uid)))
             .filter(text.like("%#cleanup%"))
             .load(&db)
-            .expect("Cannot search statuses")
+            .expect("!! Cannot search statuses")
     };
 
     if requests.is_empty() {
-        println!("No matching statuses, skip.");
+        println!("=> No matching statuses, skip.");
         return;
     }
+
+    println!(
+        "=> Found {} maybe-matching statuses, looking closer...",
+        requests.len()
+    );
 
     let re = Regex::new(r"#cleanup(?:\s+(\d+)(s|m|h|d))?").unwrap();
 
@@ -61,7 +66,7 @@ fn main() {
             }) {
                 let delay = match re.captures_iter(&status.text).next() {
                     None => {
-                        println!("No duration, default to 15m\n“{}”", status.text);
+                        println!("!! No duration, default to 15m\n“{}”", status.text);
                         900
                     }
                     Some(time) => {
@@ -81,7 +86,7 @@ fn main() {
                             Ok(n) => n * multiplier,
                             Err(err) => {
                                 println!(
-                                    "Cannot parse duration, default to 15m: {:?}\n“{}”",
+                                    "!! Cannot parse duration, default to 15m: {:?}\n“{}”",
                                     err, status.text
                                 );
                                 900
@@ -93,7 +98,7 @@ fn main() {
                 let not_before = now + Duration::seconds(delay as i64);
                 let mut thread = vec![NewDeletion::from_status(&status, not_before)];
                 println!(
-                    "Requesting deletion: {:?} {} (#{})\n“{}” — {}",
+                    "-> Requesting deletion: {:?} {} (#{})\n“{}” — {}",
                     status.source, status.source_id, status.id, status.text, status.posted_at
                 );
 
@@ -106,7 +111,7 @@ fn main() {
                             stat = s;
                             thread.push(NewDeletion::from_status(&stat, not_before));
                             println!(
-                                "Requesting deletion: {:?} {} (#{})\n“{}” — {}",
+                                "-> Requesting deletion: {:?} {} (#{})\n“{}” — {}",
                                 stat.source, stat.source_id, stat.id, stat.text, stat.posted_at
                             );
                         }
@@ -121,14 +126,14 @@ fn main() {
         .collect();
 
     if matches.is_empty() {
-        println!("No matching statuses, skip.");
+        println!("=> No matching statuses, skip.");
         return;
     }
 
     let matching = matches.len();
     let deletes: Vec<NewDeletion> = matches.into_iter().flatten().collect();
     println!(
-        "Found {} matching statuses, requesting deletion for {} statuses",
+        "=> Found {} matching statuses, requesting deletion for {} statuses",
         matching,
         deletes.len()
     );
@@ -137,7 +142,7 @@ fn main() {
     diesel::insert_into(deletions)
         .values(&deletes)
         .execute(&db)
-        .expect("Cannot submit deletion requests");
+        .expect("!! Cannot submit deletion requests");
 }
 
 enum Threading {
@@ -162,7 +167,7 @@ fn own_parent(db: &PgConnection, twitter_uid: &u64, status: &Status) -> Threadin
         .filter(source_author.like(&format!("% ({})", twitter_uid)))
         .filter(source_id.eq(parent_id))
         .load(db)
-        .expect("Cannot search statuses");
+        .expect("!! Cannot search statuses");
 
     if requests.is_empty() {
         return Threading::Stop;
@@ -170,12 +175,14 @@ fn own_parent(db: &PgConnection, twitter_uid: &u64, status: &Status) -> Threadin
 
     let mut s = None;
     for (stat, ent) in &requests {
-        if s.is_none() { s = Some(stat); }
+        if s.is_none() {
+            s = Some(stat);
+        }
 
         if let Some(entity) = ent {
             if entity.blob_hash.is_none() {
                 println!(
-                    "Status has thin entities, skipping thread: {:?} {} (#{})\n“{}” — {}",
+                    "~~ Status has thin entities, skipping thread: {:?} {} (#{})\n“{}” — {}",
                     stat.source, stat.source_id, stat.id, stat.text, stat.posted_at
                 );
 

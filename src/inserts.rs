@@ -97,7 +97,7 @@ impl From<&Tweet> for NewStatus {
                 !user.protected
             } else {
                 println!(
-                    "Cannot know whether tweet {:?} is public, defaulting to false",
+                    "~~ Cannot know whether tweet {:?} is public, defaulting to false",
                     otweet
                 );
                 false
@@ -131,7 +131,7 @@ impl From<&MediaEntity> for NewEntity {
                 .variants
                 .iter()
                 .find(|v| v.bitrate == Some(0))
-                .expect("GIF entity not in expected format")
+                .expect("!! GIF entity not in expected format")
                 .url
                 .clone(),
             MediaType::Video => {

@@ -22,7 +22,10 @@ fn main() {
     let sources = all_available();
 
     for (name, source) in &sources {
-        println!("Syncing {:?}", name);
         source.sync(&db);
+            println!(
+                "\n=> Syncing {:?} {}",
+                name,
+            );
     }
 }
