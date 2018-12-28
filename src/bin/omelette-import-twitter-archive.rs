@@ -5,12 +5,10 @@ use omelette::{
     sources::twitter, types::{IntermediarySource, Source},
 };
 use regex::Regex;
-use std::{
-    ffi::OsStr, fs::File, io::{self, Read}, path::{Path, PathBuf}, process::exit,
-};
+use std::{ffi::OsStr, fs::File, io::Read, path::PathBuf, process::exit};
 use structopt::StructOpt;
 use tree_magic::match_filepath;
-use zip::read::{ZipArchive, ZipFile};
+use zip::read::ZipArchive;
 
 #[derive(StructOpt, Debug)]
 #[structopt()]
@@ -19,9 +17,17 @@ struct Opt {
     #[structopt(long = "dotenv")]
     dotenv: bool,
 
+    /// Only do “slim” pass (parsing from CSV)
+    #[structopt(long = "only-slim")]
+    only_slim: bool,
+
+    /// Only do “fill” pass (filling slim entries from API)
+    #[structopt(long = "only-fill")]
+    only_fill: bool,
+
     /// Archive file. Either a CSV or a ZIP (containing a tweets.csv)
     #[structopt(name = "FILE", parse(from_os_str))]
-    file: PathBuf,
+    file: Option<PathBuf>,
 }
 
 fn main() {
@@ -32,32 +38,47 @@ fn main() {
         dotenv().ok();
     }
 
-    let ext_csv = opt.file.extension() == Some(OsStr::new("csv"));
-    let is_csv = match_filepath("text/csv", &opt.file);
-    let is_zip = match_filepath("application/zip", &opt.file);
-
-    if !is_zip && !is_csv && !ext_csv {
-        println!("!! File is neither a zip nor a csv, abort.");
+    if opt.only_slim && opt.only_fill {
+        println!("!! Cannot use both --only-slim and --only-fill");
         exit(1);
     }
 
-    let file = File::open(&opt.file).expect("!! File does not exist");
+    let do_slim = !opt.only_fill;
+    let do_fill = !opt.only_slim;
+
     let db = omelette::connect();
+    let mut ids = Vec::with_capacity(0);
 
-    let ids = if is_zip {
-        let mut archive = ZipArchive::new(file).unwrap();
-        let entry = archive.by_name("tweets.csv").unwrap_or_else(|_| {
-            println!("!!File is not a twitter archive, abort.");
+    if do_slim {
+        let path = opt.file.expect("!! Missing path to archive file");
+        let ext_csv = path.extension() == Some(OsStr::new("csv"));
+        let is_csv = match_filepath("text/csv", &path);
+        let is_zip = match_filepath("application/zip", &path);
+
+        if !is_zip && !is_csv && !ext_csv {
+            println!("!! File is neither a zip nor a csv, abort.");
             exit(1);
-        });
+        }
 
-        slim_load(&db, csv::Reader::from_reader(entry))
-    } else {
-        slim_load(&db, csv::Reader::from_reader(file))
-    };
+        let file = File::open(&path).expect("!! File does not exist");
 
-    // let tw = twitter::Twitter::load_unboxed();
-    // retrieve more info for each ("full" pass)
+        ids = if is_zip {
+            let mut archive = ZipArchive::new(file).unwrap();
+            let entry = archive.by_name("tweets.csv").unwrap_or_else(|_| {
+                println!("!!File is not a twitter archive, abort.");
+                exit(1);
+            });
+
+            slim_load(&db, csv::Reader::from_reader(entry))
+        } else {
+            slim_load(&db, csv::Reader::from_reader(file))
+        };
+    }
+
+    if do_fill {
+        let tw = twitter::Twitter::load_unboxed();
+        // retrieve more info for each ("full" pass)
+    }
 }
 
 fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i32> {
@@ -109,7 +130,7 @@ fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i3
             marked_at: None,
             source: Source::Twitter,
             source_id: tweet_id,
-            source_author: "".into(),
+            source_author: "~slim~".into(),
             source_app: app,
             in_reply_to_status: Some(in_reply_to_status_id),
             in_reply_to_user: None,
