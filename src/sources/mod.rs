@@ -1,5 +1,5 @@
 use crate::models::{Deletion, Status};
-use crate::types::{IntermediarySource, Source};
+use crate::types::Source;
 use diesel::{pg::PgConnection, result::Error as DieselError};
 use egg_mode::error::Error as EggError;
 use std::{
@@ -7,9 +7,8 @@ use std::{
 };
 
 pub mod twitter;
-pub mod twitter_archive;
 
-pub type Sources = HashMap<Source, Vec<Box<StatusSource>>>;
+pub type Sources = HashMap<Source, Box<StatusSource>>;
 
 pub fn all_available() -> Sources {
     let mut sources: Sources = HashMap::new();
@@ -19,11 +18,7 @@ pub fn all_available() -> Sources {
             match $struct::load() {
                 Err(err) => println!("!! Error loading {}: {:?}", stringify!($struct), err),
                 Ok(source) => {
-                    if let Some(ref mut existing) = sources.get_mut(&$struct::source()) {
-                        existing.push(source);
-                    } else {
-                        sources.insert($struct::source(), vec![source]);
-                    }
+                    sources.insert($struct::source(), source);
                 }
             };
         };
@@ -31,9 +26,6 @@ pub fn all_available() -> Sources {
 
     use self::twitter::Twitter;
     load_source!(Twitter);
-
-    use self::twitter_archive::TwitterArchive;
-    load_source!(TwitterArchive);
 
     sources
 }
@@ -61,15 +53,7 @@ pub fn run_deletes(sources: &Sources, conn: &PgConnection, mode: ActionMode) {
 
     let mut successes = 0;
     for (delete, status) in &deletes {
-        if let Some(source) = sources.get(&status.source).and_then(|srcs| {
-            srcs.iter().find_map(|src| {
-                if src.intermediary().is_none() {
-                    Some(src)
-                } else {
-                    None
-                }
-            })
-        }) {
+        if let Some(source) = sources.get(&status.source) {
             match mode {
                 ActionMode::DryRun => println!("\n-> DRY RUN: would delete status: {:?}", status),
                 ActionMode::Interactive => {
@@ -178,10 +162,6 @@ impl Default for ActionMode {
 }
 
 pub trait StatusSource {
-    fn intermediary(&self) -> Option<IntermediarySource> {
-        None
-    }
-
     fn sync(&self, conn: &PgConnection) -> bool;
     fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError>;
 }

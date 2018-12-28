@@ -22,21 +22,13 @@ fn main() {
     let sources = all_available();
 
     let mut successes = 0;
-    for (name, srcs) in &sources {
-        for src in srcs {
-            println!(
-                "\n=> Syncing {:?} {}",
-                name,
-                src.intermediary()
-                    .map(|i| format!("(intermediary: {:?})", i))
-                    .unwrap_or("".into())
-            );
+    for (name, source) in &sources {
+        println!("\n=> Syncing {:?}", name);
 
-            if src.sync(&db) {
-                successes += 1;
-            }
+        if source.sync(&db) {
+            successes += 1;
         }
     }
 
-    println!("\n=> Synced {} sources and intermediaries.", successes);
+    println!("\n=> Synced {} sources.", successes);
 }
