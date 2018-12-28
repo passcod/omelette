@@ -21,11 +21,22 @@ fn main() {
     let db = omelette::connect();
     let sources = all_available();
 
-    for (name, source) in &sources {
-        source.sync(&db);
+    let mut successes = 0;
+    for (name, srcs) in &sources {
+        for src in srcs {
             println!(
                 "\n=> Syncing {:?} {}",
                 name,
+                src.intermediary()
+                    .map(|i| format!("(intermediary: {:?})", i))
+                    .unwrap_or("".into())
             );
+
+            if src.sync(&db) {
+                successes += 1;
+            }
+        }
     }
+
+    println!("\n=> Synced {} sources and intermediaries.", successes);
 }
