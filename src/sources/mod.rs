@@ -162,7 +162,7 @@ impl Default for ActionMode {
 }
 
 pub trait StatusSource {
-    fn sync(&self, conn: &PgConnection);
+    fn sync(&self, conn: &PgConnection) -> bool;
     fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError>;
 }
 

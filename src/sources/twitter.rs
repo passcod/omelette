@@ -83,7 +83,7 @@ impl StatusSource for Twitter {
     penultimate <-- what we request with
     */
 
-    fn sync(&self, conn: &PgConnection) {
+    fn sync(&self, conn: &PgConnection) -> bool {
         let (penultimate, latest) = Self::latest_2_ids_in_db(conn);
         let latest = latest.or(penultimate).unwrap_or(0);
         println!(":: Latest twitter ID we have:\t\t{}", latest);
@@ -186,6 +186,8 @@ impl StatusSource for Twitter {
             "=> Inserted {} new tweets in DB ({}) and {} entities",
             inserted_len, hint, entitied
         );
+
+        true
     }
 
     fn delete(&self, conn: &PgConnection, status: &Status) -> Result<(), DeleteError> {
