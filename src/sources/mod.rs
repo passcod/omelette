@@ -7,6 +7,7 @@ use std::{
 };
 
 pub mod twitter;
+pub mod twitter_archive;
 
 pub type Sources = HashMap<Source, Vec<Box<StatusSource>>>;
 
@@ -30,6 +31,9 @@ pub fn all_available() -> Sources {
 
     use self::twitter::Twitter;
     load_source!(Twitter);
+
+    use self::twitter_archive::TwitterArchive;
+    load_source!(TwitterArchive);
 
     sources
 }

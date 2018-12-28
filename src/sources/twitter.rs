@@ -22,6 +22,11 @@ impl Twitter {
     }
 
     pub fn load() -> Result<Box<StatusSource>, LoadError> {
+        let tw = Self::load_unboxed()?;
+        Ok(Box::new(tw))
+    }
+
+    pub fn load_unboxed() -> Result<Self, LoadError> {
         let con_token = KeyPair::new(
             env::var("TWITTER_CONSUMER_KEY")?,
             env::var("TWITTER_CONSUMER_SECRET")?,
@@ -39,10 +44,10 @@ impl Twitter {
             .parse()
             .expect("TWITTER_USER_ID must be u64");
 
-        Ok(Box::new(Self {
+        Ok(Self {
             token,
             id: uid.into(),
-        }))
+        })
     }
 
     fn latest_2_ids_in_db(conn: &PgConnection) -> (Option<u64>, Option<u64>) {
