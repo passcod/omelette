@@ -13,6 +13,7 @@ regex = "1.1.0"
 reqwest = "0.9.5"
 structopt = "0.2.14"
 tokio = "0.1.13"
+tree_magic = "0.2.1"
 
 [dependencies.diesel]
 features = ["chrono", "postgres"]

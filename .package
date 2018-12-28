@@ -26,7 +26,7 @@ if [[ "$target" == *"windows"* ]]; then
 fi
 
 project="omelette"
-bins="cleanup delete mediatise migrate-db sync"
+bins="cleanup delete import-twitter-archive mediatise migrate-db sync"
 build_dir=$(mktemp -d 2>/dev/null || mktemp -d -t tmp)
 out_dir=$(pwd)
 name="$project-$tag-$target"
