@@ -40,12 +40,11 @@ before_script:
 
 script:
   - cargo check --target $TARGET
-  - cargo build --target $TARGET
-  - cargo test --target $TARGET
 
 before_deploy: ./.package $TRAVIS_TAG $TARGET
 deploy:
   provider: releases
+  skip_cleanup: true
   api_key:
     secure: e+wZms43ctcATMA9im0/zyqDaxman8cfwn8VDQ7ZSsWzQQF9FHFKiTgFrHYneX7Aqzd1jCilnljTCpkgrLPCLaocUTGE4+5uCCQh1n48XUDtHGzHUYJpWSKaUw55hvs/TSpFw05rmsxgpVOe36eT4anw0M2WzuRcapWPEy6LTTH42NbjU769GYPia47Sj9af7udGHRw4ahW3aIE2eXk7sLAKeGq9hoZ5K4vWdyAuX4tFdzUu7QwZK3bP1jbQHTJQSMUacLlt31TGIXVaTY6WtJNRmokJaogVHoBgJaMaMXs+VQvybgqcLfBMEL9NzfhGcinYGdKDk99GKeiAB7x/zTZIrWTY4udHG6bcsJH2//fY6oRRvE1f/9WUFYQI5b0CU0od60OSkh0+jj0TslN6DPz8Ko3nM6WKCmwy8WsNcNgpk0U0gJYLv5t2NKMzomc3p5ISNeLdzM5HXb3XrbLK6M+jEn4z+yDzGDn3X/L+672UaX5h3kKVMwEQTzqdLg7mp/CcoZ0DHs0+gyybptgGIL9FLYRQ3rUKh7mncSeEEkMzVVjnCeSpA5opX4jsmOmMIMsiDadCPCdgcozEXLbCZpAmLB83+HSSrLfVDldeoXJbp3AUfP4u/NM3WXaaOD8Y+yafNkMfTpAfXn/+/52IQwZWnjSGG44B1mqZj8+96lM=
   file_glob: true
