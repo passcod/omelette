@@ -1,14 +1,7 @@
-use chrono::{TimeZone, Utc};
 use diesel::prelude::*;
-use dotenv::dotenv;
-use omelette::{
-    sources::twitter, types::{IntermediarySource, Source},
-};
-use regex::Regex;
-use std::{ffi::OsStr, fs::File, io::Read, path::PathBuf, process::exit};
+use omelette::sources::twitter::Twitter;
+use std::{io::Read, path::PathBuf};
 use structopt::StructOpt;
-use tree_magic::match_filepath;
-use zip::read::ZipArchive;
 
 #[derive(StructOpt, Debug)]
 #[structopt()]
@@ -31,6 +24,11 @@ struct Opt {
 }
 
 fn main() {
+    use dotenv::dotenv;
+    use std::{ffi::OsStr, fs::File, process::exit};
+    use tree_magic::match_filepath;
+    use zip::read::ZipArchive;
+
     let opt = Opt::from_args();
 
     if cfg!(debug_assertions) || opt.dotenv {
@@ -76,7 +74,7 @@ fn main() {
     }
 
     if do_hydrate {
-        let tw = twitter::Twitter::load_unboxed();
+        let tw = Twitter::load_unboxed();
         // retrieve more info for each ("full" pass)
 
         // first using the ids from above
@@ -87,8 +85,11 @@ fn main() {
 }
 
 fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i32> {
+    use chrono::{TimeZone, Utc};
     use omelette::inserts::NewStatus;
     use omelette::schema::statuses::dsl::*;
+    use omelette::types::{IntermediarySource, Source};
+    use regex::Regex;
 
     let source_app_re = Regex::new("^<a href=\"([^\"]+)\".*>(.+)</a>$").unwrap();
 
