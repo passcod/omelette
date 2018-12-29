@@ -33,9 +33,10 @@ Omelette is a collection of small tools:
  - `omelette-cleanup` parses the database for `#cleanup` requests and figures
    out which tweets and threads to request deletion for.
 
- - `omelette-import-twitter-archive` imports tweets from a Twitter Archive file,
-   either directly from the zip or from the extracted `tweets.csv`, then returns
-   to the Twitter API to fill in the details (the archive data is very sparse).
+ - [`omelette-twitter-archive`](#twitter-archive) imports tweets from a Twitter
+   Archive file, either directly from the zip or from the extracted tweets.csv,
+   then returns to the Twitter API to hydrate the tweets aka fill in the details
+   (the archive data is very sparse).
 
  - [`omelette-twitter-events`](#twitter-events) is a web server that sets up and
    consumes account activity webhook events, stores incoming tweets, and can
@@ -108,12 +109,44 @@ Every time there’s an update to omelette, do that again. There’s no undo, no
 to insert tweets back where they were again, so be careful with it.
 
 Most tools with omelette are designed to be run at intervals, they’re not
-daemons. Use crons or systemd timers to run them every so often. You'll want to
+daemons. Use crons or systemd timers to run them every so often. You’ll want to
 pick a rate that doesn’t hit the API too much, while still being useful. This
 varies by tool, but 5 minutes is often a good default. You may also hook them
 to an omelette event daemon (see below).
 
 ## got more docs?
+
+### twitter-archive
+
+This tool works on a downloaded [Twitter archive file], which can be requested
+from Twitter and will be emailed to you (warning: in some known cases,
+high-volume tweeters have been unable to get their archive file).
+
+If you’ve already extracted your archive, you can point the tool the tweets.csv
+file. Otherwise, pointing the tool to the zip file will work too, at a slight
+speed penalty. The tool batches and streams the import, so it will not eat all
+your memory even if you have lots of history.
+
+The import has two steps: the “slim” pass, and the “hydrate” pass.
+
+In the “slim” pass, the tweets are read from the archive into the database. But
+the archive is very light on details and contains ambiguous information in many
+cases, so the tool only stores what it is sure of.
+
+In the “hydrate” pass, the tool goes back to the Twitter API and looks up tweets
+from the service, requesting the full set of information and filling the gaps in
+the database. If it cannot find a tweet, it marks it as deleted in the database.
+
+Because archives can contain lots of tweets, this pass is pre-emptively
+throttled to batches of 100 tweets every 5 seconds, which means it can take a
+long time to hydrate all tweets! For this reason, the tool can be stopped at any
+time and restarted using the `--only-hydrate` flag, which will skip the first
+pass and keep hydrating remaining tweets.
+
+The `--only-slim` flag can be used to only run the first pass, if you know you
+don’t have time or are on a metered internet connection, for example.
+
+[Twitter archive file]: https://help.twitter.com/en/managing-your-account/how-to-download-your-twitter-archive
 
 ### twitter-events
 

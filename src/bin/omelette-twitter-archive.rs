@@ -21,9 +21,9 @@ struct Opt {
     #[structopt(long = "only-slim")]
     only_slim: bool,
 
-    /// Only do “fill” pass (filling slim entries from API)
-    #[structopt(long = "only-fill")]
-    only_fill: bool,
+    /// Only do “hydrate” pass (hydrating slim entries by Twitter lookup)
+    #[structopt(long = "only-hydrate")]
+    only_hydrate: bool,
 
     /// Archive file. Either a CSV or a ZIP (containing a tweets.csv)
     #[structopt(name = "FILE", parse(from_os_str))]
@@ -38,13 +38,13 @@ fn main() {
         dotenv().ok();
     }
 
-    if opt.only_slim && opt.only_fill {
-        println!("!! Cannot use both --only-slim and --only-fill");
+    if opt.only_slim && opt.only_hydrate {
+        println!("!! Cannot use both --only-slim and --only-hydrate");
         exit(1);
     }
 
-    let do_slim = !opt.only_fill;
-    let do_fill = !opt.only_slim;
+    let do_slim = !opt.only_hydrate;
+    let do_hydrate = !opt.only_slim;
 
     let db = omelette::connect();
     let mut ids = Vec::with_capacity(0);
@@ -75,9 +75,14 @@ fn main() {
         };
     }
 
-    if do_fill {
+    if do_hydrate {
         let tw = twitter::Twitter::load_unboxed();
         // retrieve more info for each ("full" pass)
+
+        // first using the ids from above
+
+        // then going back to the db and querying for slim-pass ones that may
+        // have been missed or when the hydrate-pass was disabled.
     }
 }
 
