@@ -1,5 +1,7 @@
 # omelette
 
+[![Build status](https://flat.badgen.net/travis/passcod/omelette/master)](https://travis-ci.com/passcod/omelette)
+
 Inspired by [@MylesBorins’s cleanup tool](https://github.com/MylesBorins/cleanup).
 
 The original idea is simple: given a tweet calling the bot with the hashtag

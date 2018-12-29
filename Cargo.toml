@@ -4,6 +4,10 @@ edition = "2018"
 name = "omelette"
 version = "1.0.0"
 
+[badges]
+travis-ci = { repository = "passcod/omelette" }
+maintenance = { status = "actively-developed" }
+
 [dependencies]
 blobstore = "0.1.1"
 chrono = "0.4.6"
