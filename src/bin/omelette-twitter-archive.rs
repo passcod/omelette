@@ -74,14 +74,43 @@ fn main() {
     }
 
     if do_hydrate {
-        let tw = Twitter::load_unboxed();
+        let tw = Twitter::load_unboxed().expect("!! Cannot connect to Twitter");
         // retrieve more info for each ("full" pass)
 
         // first using the ids from above
+        if !ids.is_empty() {
+            println!("\n=> Hydrating {} newly archived tweets (~{})", ids.len(), hydrate_est(ids.len()));
+            for (i, batch) in ids.chunks(100).enumerate() {
+                println!("-> Batch {} of {} tweets", i, batch.len());
+                hydrate_batch(&db, &tw, batch);
+            }
+        }
 
         // then going back to the db and querying for slim-pass ones that may
         // have been missed or when the hydrate-pass was disabled.
+        use omelette::schema::statuses::dsl::*;
+        use omelette::types::{IntermediarySource, Source};
+        let ids_left = statuses.select(id)
+            .filter(source.eq(Source::Twitter))
+            .filter(fetched_via.eq(IntermediarySource::TwitterArchive))
+            .filter(source_author.eq(slim_mark()))
+            .load::<i32>(&db)
+            .expect("!! Cannot query DB for leftover slim entries");
+
+        if !ids_left.is_empty() {
+            println!("\n=> Hydrating {} leftover slim tweets (~{})", ids_left.len(), hydrate_est(ids_left.len()));
+            for (i, batch) in ids_left.chunks(100).enumerate() {
+                println!("-> Batch {} of {} tweets", i, batch.len());
+                hydrate_batch(&db, &tw, batch);
+            }
+        }
+
+        println!("\n=> Done hydrating.")
     }
+}
+
+fn slim_mark() -> String {
+    "~slim~".into()
 }
 
 fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i32> {
@@ -97,7 +126,7 @@ fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i3
     let mut bag = Vec::with_capacity(1000);
     let mut batch = 0;
 
-    println!("=> Loading from archive in batches of 1000");
+    println!("\n=> Loading from archive in batches of 1000");
     let mut csv_reader = csv_reader;
     for record in csv_reader.records() {
         let record = record.expect("!! Error parsing CSV");
@@ -136,7 +165,7 @@ fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i3
             marked_at: None,
             source: Source::Twitter,
             source_id: tweet_id,
-            source_author: "~slim~".into(),
+            source_author: slim_mark(),
             source_app: app,
             in_reply_to_status: Some(in_reply_to_status_id),
             in_reply_to_user: None,
@@ -184,4 +213,31 @@ fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i3
         ids.len()
     );
     ids
+}
+
+fn hydrate_est(n: usize) -> String {
+    let mut seconds = n * 5 / 100;
+    let hours = seconds / 3600;
+    seconds = seconds % 3600;
+    let minutes = seconds / 60 + if seconds % 60 > 30 { 1 } else { 0 };
+
+    if hours == 0 {
+        format!("{} minutes", minutes)
+    } else {
+        format!("{} hours {} minutes", hours, minutes)
+    }
+}
+
+fn hydrate_batch(conn: &PgConnection, tw: &Twitter, ids: &[i32]) {
+    use std::time::{Duration, Instant};
+    use std::thread::sleep;
+
+    let min = Duration::from_secs(5);
+    let now = Instant::now();
+
+    // ...
+
+    if let Some(left) = min.checked_sub(now.elapsed()) {
+        sleep(left);
+    }
 }
