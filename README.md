@@ -93,7 +93,7 @@ omelette-delete --dry-run
 
 ## …which i install how?
 
-If you’ve got macOS or Linux, head on over to [the releases tab].
+If you’ve got macOS, Windows, or Linux, head on over to [the releases tab].
 
 Otherwise, if you’ve got Rust installed, clone and `cargo build --release`!
 
