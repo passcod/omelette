@@ -37,6 +37,10 @@ Omelette is a collection of small tools:
    either directly from the zip or from the extracted `tweets.csv`, then returns
    to the Twitter API to fill in the details (the archive data is very sparse).
 
+ - [`omelette-twitter-events`](#twitter-events) is a web server that sets up and
+   consumes account activity webhook events, stores incoming tweets, and can
+   trigger other omelette tools in turn. **(TODO)**
+
 You can bolt on additional behaviour simply by running a script or tool of your
 own that reads statuses from and writes deletion requests to the database.
 Please contribute useful tools back to this repo!
@@ -92,9 +96,7 @@ Otherwise, if you’ve got Rust installed, clone and `cargo build --release`!
 
 [the releases tab]: https://github.com/passcod/omelette/releases
 
-## any more tips?
-
-Yeah.
+## any general tips?
 
 Pass the `--dotenv` flag to load from a `.env` file in the current directory.
 
@@ -105,18 +107,45 @@ during that time to get prompted before deleting each tweet.
 Every time there’s an update to omelette, do that again. There’s no undo, no way
 to insert tweets back where they were again, so be careful with it.
 
-Omelette is designed to be run at intervals, it’s not a daemon. Use a cron or a
-systemd timer to keep it going.
+Most tools with omelette are designed to be run at intervals, they’re not
+daemons. Use crons or systemd timers to run them every so often. You'll want to
+pick a rate that doesn’t hit the API too much, while still being useful. This
+varies by tool, but 5 minutes is often a good default. You may also hook them
+to an omelette event daemon (see below).
 
-If you don’t tweet much, you don’t need to run it as much. But if you tweet lots,
-you’ll need to run it more often. When it syncs, it will tell you how many calls
-it had to make to the Twitter API to go however far back as it needed to pull
-down your tweet history since it last ran. You want to get it so that it does
-one call every time it runs, and no more than that. Give yourself some margin to
-account for peaks and bursts, but otherwise, set intervals as wide as you can
-while still being often enough to be useful (15 minutes at most, plausibly.)
+## got more docs?
 
-## that’s cool. who do i have to thank for this?
+### twitter-events
+
+This tool is a daemon that serves a web service and registers it as a webhook on
+your user account. Twitter then delivers account activity events as HTTP POST
+requests to the server. When the tool shuts down it will unregister the webhook.
+
+If you have Tor installed and configured, and pass the `--tor` flag, the tool
+will attempt to set up an onion service for its server, and register the webhook
+for `onionservicename.onion.to`, making it possible to run behind a firewall.
+
+Otherwise, you’ll need to run the tool on a server with a public interface, or
+rig up a tunnel somehow (for example using [ngrok](https://ngrok.com), but note
+ngrok’s limits may not suffice, as each event will count for one connection).
+
+You can pass the `--public <URL>` option to tell the tool about the public URL
+for the service, otherwise it will attempt to determine its own public IP, and
+will error if it cannot successfully establish a public service.
+
+The `--on-<event> <TOOL>` series of options will run the named tool (which can
+be an omelette tool or any other program in PATH) when an event is received, but
+after the event has been processed internally first (i.e. tweets added to the
+database, etc). The environment variable `OMELETTE_STREAM_EVENT` will be set,
+and the payload will be piped to the tool’s STDIN in JSON format.
+
+For example, you’ll probably want to run `--on-create omelette-cleanup`.
+
+There’s also a special event `--on-boot` that runs after the webhook service has
+been configured, registered, and connectivity has been checked by Twitter.
+You can find the whole list of events with `--help`.
+
+## who do i have to thank for this?
 
 There’s me, [@passcod](https://passcod.name).
 
@@ -125,8 +154,6 @@ There’s [@MylesBorins](https://mylesborins.com) who started the whole thing.
 There’s [Diesel](http://diesel.rs) and [Egg Mode](https://github.com/QuietMisdreavus/twitter-rs) that do the heavy lifting.
 
 ## any last words?
-
-Sure.
 
 This work is made available to you under the terms of the [Artistic 2.0] license.
 Don’t be a jerk. Additionally, the [Contributor Covenant] applies.
