@@ -262,8 +262,13 @@ fn hydrate_batch(conn: &PgConnection, tw: &Twitter, ids: &[i32]) {
             .collect()
     };
 
-    let tweets = block_on_all(lookup_map(source_ids, &tw.token))
-        .expect("!! Cannot connect to twitter");
+    let tweets = match block_on_all(lookup_map(source_ids, &tw.token)) {
+        Ok(tws) => tws,
+        Err(err) => {
+            println!("!! Cannot fetch tweets, skipping batch.\n{:?}", err);
+            return;
+        }
+    };
 
     let statuses: Vec<Status> = {
         use omelette::schema::statuses::dsl::*;
