@@ -10,11 +10,11 @@ parent or whose parent is someone else’s tweet (we can only delete our own).
 Unfortunately, the original stopped working when Twitter disabled its stream API.
 
 So this conceptually started as a re-implementation. But while I want to cleanup
-_public_ history, I kinda want to keep it for myself. And I might want to do
+_public_ history, I kinda want to keep it for myself. I might also want to do
 more powerful or extensive stuff, like cleaning up all branches of a thread, or
 deleting my entire history up to a point, and then keep deleting as I keep
 tweeting, essentially keeping me with a set amount of history, like 6 months or
-something, and archiving the rest.
+something, and archiving the rest. And as I worked, more possibilities emerged.
 
 ## so that’s the story. what does this do?
 

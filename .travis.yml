@@ -1,7 +1,14 @@
 language: rust
 rust: stable
-cache: cargo
-dist: trusty
+dist: xenial
+
+cache:
+  - directories:
+    - $HOME/.rustup
+    - target/debug/deps
+    - target/release/deps
+    - target/$TARGET/debug/deps
+    - target/$TARGET/release/deps
 
 addons:
   apt:
@@ -23,7 +30,14 @@ matrix:
     - os: linux
       env: TARGET=x86_64-unknown-linux-musl
 
-before_script: rustup target add $TARGET || echo ok
+  # Experimental, best-effort, support
+  allow_failures:
+    - env: TARGET=x86_64-unknown-linux-musl
+  fast_finish: true
+
+before_script:
+  - rustup target add $TARGET || true
+
 script:
   - cargo check --target $TARGET
   - cargo build --target $TARGET
