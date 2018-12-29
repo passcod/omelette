@@ -219,7 +219,13 @@ fn hydrate_est(n: usize) -> String {
     let mut seconds = n * 5 / 100;
     let hours = seconds / 3600;
     seconds = seconds % 3600;
-    let minutes = seconds / 60 + if seconds % 60 > 30 { 1 } else { 0 };
+
+    let mut minutes = seconds / 60;
+    if seconds % 60 > 30 {
+        minutes += 1;
+    } else if minutes == 0 {
+        minutes = 1;
+    }
 
     if hours == 0 {
         format!("{} minutes", minutes)
@@ -229,13 +235,119 @@ fn hydrate_est(n: usize) -> String {
 }
 
 fn hydrate_batch(conn: &PgConnection, tw: &Twitter, ids: &[i32]) {
-    use std::time::{Duration, Instant};
+    use chrono::Utc;
+    use egg_mode::tweet::lookup_map;
+    use omelette::inserts::{NewEntity, NewStatus};
+    use omelette::models::Status;
+    use omelette::types::IntermediarySource;
     use std::thread::sleep;
+    use std::time::{Duration, Instant};
+    use tokio::runtime::current_thread::block_on_all;
 
+    // Rate-limit on lookups is 300 per app per 15 minutes. That works out at
+    // about one run every 3 seconds. But the *user* limit is 900, and we don't
+    // want to inconvenience the user, nor to forbid other omelette tools that
+    // might use lookups during the same time, so we push up to 5 seconds.
     let min = Duration::from_secs(5);
     let now = Instant::now();
 
-    // ...
+    let source_ids: Vec<u64> = {
+        use omelette::schema::statuses::dsl::*;
+        statuses.select(source_id)
+            .filter(id.eq_any(ids))
+            .load::<String>(conn)
+            .expect("!! Cannot connect to DB")
+            .iter()
+            .map(|sid| sid.parse().expect("!! Cannot parse source ID"))
+            .collect()
+    };
+
+    let tweets = block_on_all(lookup_map(source_ids, &tw.token))
+        .expect("!! Cannot connect to twitter");
+
+    let statuses: Vec<Status> = {
+        use omelette::schema::statuses::dsl::*;
+        statuses
+            .filter(id.eq_any(ids))
+            .load(conn)
+            .expect("!! Cannot connect to DB")
+    };
+
+    for status in &statuses {
+        use omelette::schema::statuses::dsl::*;
+
+        let sid: u64 = status.source_id.parse().expect("!! Cannot parse source ID");
+        let tweet = tweets.get(&sid).expect("!! Mismatch between input and lookup");
+
+        if let Some(tweet) = tweet {
+            let mut insert: NewStatus = tweet.into();
+            insert.fetched_via = Some(IntermediarySource::TwitterArchive);
+
+            let mut entitybag = if let Some(ref ents) = tweet.extended_entities {
+                NewEntity::from_extended(&ents)
+            } else {
+                Vec::new()
+            };
+
+            // Update and insert in a transaction so we don’t save an hydrated
+            // tweet without its entities if we’re interrupted in the middle.
+            conn.transaction::<_, diesel::result::Error, _>(|| {
+                let new_id = if status.source_id == insert.source_id {
+                    diesel::update(statuses.find(status.id))
+                        .set(insert)
+                        .execute(conn)?;
+
+                    status.id
+                } else {
+                    // Hydrating to a retweet.
+                    // We instead insert the hydrated tweet and delete the slim.
+
+                    let nids: Vec<i32> = diesel::insert_into(statuses)
+                        .values(&insert)
+                        .on_conflict(source_id)
+                        .do_nothing()
+                        .returning(id)
+                        .load(conn)?;
+
+                    let nid = match nids.get(0) {
+                        Some(n) => n.clone(),
+                        None => statuses.select(id)
+                            .filter(source_id.eq(insert.source_id))
+                            .first::<i32>(conn)?
+                    };
+
+                    diesel::delete(statuses.find(status.id))
+                        .execute(conn)?;
+
+                    nid
+                };
+
+                // Add those late so it picks up if the ID has changed above
+                for ent in &mut entitybag {
+                    ent.status_id = new_id;
+                }
+
+                {
+                    use omelette::schema::entities::dsl::*;
+                    diesel::insert_into(entities)
+                        .values(&entitybag)
+                        .on_conflict(source_id)
+                        .do_nothing()
+                        .execute(conn)?;
+                }
+
+                Ok(())
+            }).expect("!! Cannot update DB");
+        } else {
+            diesel::update(statuses.find(status.id))
+                .set((
+                    source_author.eq("".to_string()),
+                    deleted_at.eq(Utc::now())
+                ))
+                .execute(conn)
+                .expect("!! Cannot update DB");
+        }
+    }
 
     if let Some(left) = min.checked_sub(now.elapsed()) {
         sleep(left);

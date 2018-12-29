@@ -12,8 +12,8 @@ use tokio::runtime::current_thread::block_on_all;
 
 #[derive(Clone, Debug)]
 pub struct Twitter {
-    token: Token,
-    id: UserID<'static>,
+    pub token: Token,
+    pub id: UserID<'static>,
 }
 
 impl Twitter {

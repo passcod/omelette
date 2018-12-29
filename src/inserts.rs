@@ -8,8 +8,9 @@ use egg_mode::{
     entities::MediaEntity, tweet::{ExtendedTweetEntities, Tweet},
 };
 
-#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
+#[derive(AsChangeset, Clone, Debug, Insertable, PartialEq, PartialOrd)]
 #[table_name = "statuses"]
+#[changeset_options(treat_none_as_null="true")]
 pub struct NewStatus {
     pub text: String,
     pub author_id: Option<i32>,
