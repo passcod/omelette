@@ -100,7 +100,7 @@ fn main() {
         if !ids_left.is_empty() {
             println!("\n=> Hydrating {} leftover slim tweets (~{})", ids_left.len(), hydrate_est(ids_left.len()));
             for (i, batch) in ids_left.chunks(100).enumerate() {
-                println!("-> Batch {} of {} tweets", i, batch.len());
+                println!("-> Batch {} of {} tweets", i + 1, batch.len());
                 hydrate_batch(&db, &tw, batch);
             }
         }
