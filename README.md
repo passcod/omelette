@@ -1,6 +1,6 @@
 # omelette
 
-[![Build status](https://flat.badgen.net/travis/passcod/omelette/master)](https://travis-ci.com/passcod/omelette)
+[![Build Status](https://travis-ci.com/passcod/omelette.svg?branch=main)](https://travis-ci.com/passcod/omelette)
 
 Inspired by [@MylesBorins’s cleanup tool](https://github.com/MylesBorins/cleanup).
 
