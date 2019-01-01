@@ -34,7 +34,7 @@ features = ["postgres"]
 version = "1.3.0"
 
 [dependencies.egg-mode]
-git = "https://github.com/QuietMisdreavus/twitter-rs"
+git = "https://github.com/passcod/twitter-rs"
 
 [target.'cfg(target_env="musl")'.dependencies.openssl]
 features = ["vendored"]
