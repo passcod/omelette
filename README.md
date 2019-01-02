@@ -157,8 +157,12 @@ your user account. Twitter then delivers account activity events as HTTP POST
 requests to the server. When the tool shuts down it will unregister the webhook.
 
 If you have Tor installed and configured, and pass the `--tor` flag, the tool
-will attempt to set up an onion service for its server, and register the webhook
-for `onionservicename.onion.to`, making it possible to run behind a firewall.
+will attempt to set up an onion service for its server, and register the
+webhook for `onionservicename.onion.to`. The `--tor-gateway <DOMAIN>` option
+allows to choose a different gateway, and the `--tor-v3` flag switches to use
+v3 onions (but note that Tor2Web does not support them at this time). Running
+with Tor allows you to run from behind a firewall, which increases convenience
+and security, but please note that the gateway is able to see all your data.
 
 Otherwise, you’ll need to run the tool on a server with a public interface, or
 rig up a tunnel somehow (for example using [ngrok](https://ngrok.com), but note
