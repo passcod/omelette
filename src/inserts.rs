@@ -5,7 +5,9 @@ use crate::models::Status;
 use crate::schema::*;
 use crate::types::*;
 use egg_mode::{
-    entities::MediaEntity, tweet::{ExtendedTweetEntities, Tweet},
+    entities::MediaEntity,
+    tweet::{ExtendedTweetEntities, Tweet},
+    user::TwitterUser as EggUser,
 };
 
 #[derive(AsChangeset, Clone, Debug, Insertable, PartialEq, PartialOrd)]
@@ -186,6 +188,64 @@ impl NewDeletion {
             not_before,
             status_id: status.id,
             sponsor: "omelette".into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
+#[table_name = "twitter_users"]
+pub struct NewTwitterUser {
+    pub source_id: String,
+    pub screen_name: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub url: Option<String>,
+    pub is_verified: bool,
+    pub is_protected: bool,
+    pub is_coauthored: bool,
+    pub is_translator: bool,
+    pub statuses_count: i32,
+    pub following_count: i32,
+    pub followers_count: i32,
+    pub likes_count: i32,
+    pub listed_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub fetched_at: DateTime<Utc>,
+    pub blocked_at: Option<DateTime<Utc>>,
+    pub muted_at: Option<DateTime<Utc>>,
+    pub ui_language: Option<String>,
+    pub ui_timezone: Option<String>,
+    pub withheld_in: Option<String>,
+    pub withheld_scope: Option<String>,
+}
+
+impl From<&EggUser> for NewTwitterUser {
+    fn from(u: &EggUser) -> NewTwitterUser {
+        NewTwitterUser {
+            source_id: format!("{}", u.id),
+            screen_name: u.screen_name.clone(),
+            name: u.name.clone(),
+            description: u.description.clone(),
+            location: u.location.clone(),
+            url: u.url.clone(),
+            is_verified: u.verified,
+            is_protected: u.protected,
+            is_coauthored: u.contributors_enabled,
+            is_translator: u.is_translator,
+            statuses_count: u.statuses_count,
+            following_count: u.friends_count,
+            followers_count: u.followers_count,
+            likes_count: u.favourites_count,
+            listed_count: u.listed_count,
+            created_at: u.created_at,
+            fetched_at: Utc::now(),
+            blocked_at: None,
+            muted_at: None,
+            ui_language: u.lang.clone(),
+            ui_timezone: u.time_zone.clone(),
+            withheld_in: u.withheld_in_countries.clone().map(|v| v.join(", ")),
+            withheld_scope: u.withheld_scope.clone(),
         }
     }
 }

@@ -61,6 +61,38 @@ table! {
     }
 }
 
+table! {
+    use diesel::sql_types::*;
+    use crate::types::*;
+
+    twitter_users (id) {
+        id -> Int4,
+        source_id -> Text,
+        screen_name -> Text,
+        name -> Text,
+        description -> Nullable<Text>,
+        location -> Nullable<Text>,
+        url -> Nullable<Text>,
+        is_verified -> Bool,
+        is_protected -> Bool,
+        is_coauthored -> Bool,
+        is_translator -> Bool,
+        statuses_count -> Int4,
+        following_count -> Int4,
+        followers_count -> Int4,
+        likes_count -> Int4,
+        listed_count -> Int4,
+        created_at -> Timestamptz,
+        fetched_at -> Timestamptz,
+        blocked_at -> Nullable<Timestamptz>,
+        muted_at -> Nullable<Timestamptz>,
+        ui_language -> Nullable<Text>,
+        ui_timezone -> Nullable<Text>,
+        withheld_in -> Nullable<Text>,
+        withheld_scope -> Nullable<Text>,
+    }
+}
+
 joinable!(deletions -> statuses (status_id));
 joinable!(entities -> statuses (status_id));
 
@@ -68,4 +100,5 @@ allow_tables_to_appear_in_same_query!(
     deletions,
     entities,
     statuses,
+    twitter_users,
 );

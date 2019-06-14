@@ -69,9 +69,7 @@ To dump the status, type 'show' or '?'.
 To skip, type anything else or just press enter.
 To exit, use Ctrl-C.
 
-Delete status {}? ",
-                        123
-                    );
+Delete status? ");
 
                     io::stdout().flush().unwrap();
 

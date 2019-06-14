@@ -59,5 +59,34 @@ pub struct Deletion {
     pub sponsor: String,
 }
 
+#[derive(Clone, Debug, Identifiable, Insertable, PartialEq, PartialOrd, Queryable)]
+#[table_name = "twitter_users"]
+pub struct TwitterUser {
+    pub id: i32,
+    pub source_id: String,
+    pub screen_name: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub url: Option<String>,
+    pub is_verified: bool,
+    pub is_protected: bool,
+    pub is_coauthored: bool,
+    pub is_translator: bool,
+    pub statuses_count: i32,
+    pub following_count: i32,
+    pub followers_count: i32,
+    pub likes_count: i32,
+    pub listed_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub fetched_at: DateTime<Utc>,
+    pub blocked_at: Option<DateTime<Utc>>,
+    pub muted_at: Option<DateTime<Utc>>,
+    pub ui_language: Option<String>,
+    pub ui_timezone: Option<String>,
+    pub withheld_in: Option<String>,
+    pub withheld_scope: Option<String>,
+}
+
 sql_function!(#[sql_name="repeat"] fn pg_repeat(t: Text, n: Int4) -> Text);
 sql_function!(#[sql_name="to_number"] fn pg_to_number(t: Text, f: Text) -> Numeric);

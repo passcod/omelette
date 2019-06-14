@@ -1,11 +1,12 @@
 use chrono::Utc;
-use crate::inserts::{NewEntity, NewStatus};
-use crate::models::Status;
+use crate::inserts::{NewEntity, NewStatus, NewTwitterUser};
+use crate::models::{Status, TwitterUser};
 use crate::sources::{DeleteError, LoadError, StatusSource};
 use crate::types::Source;
 use diesel::prelude::*;
 use egg_mode::tweet::{delete, unretweet, user_timeline};
-use egg_mode::{user::UserID, KeyPair, Token};
+use egg_mode::{user::{UserID, blocks}, KeyPair, Token};
+use futures::Stream;
 use std::collections::HashMap;
 use std::env;
 use tokio::runtime::current_thread::block_on_all;
@@ -69,6 +70,60 @@ impl Twitter {
 
         (ids.pop(), ids.pop())
         // penultimate, latest
+    }
+
+    // (fetched, inserted)
+    pub fn fetch_blocks(&self, conn: &PgConnection) -> (usize, usize) {
+        let mut fetched = 0;
+        let mut inserted = 0;
+
+        use std::time::{Instant, Duration};
+        let mut bagstart = Instant::now();
+        let mut blockbag: Vec<NewTwitterUser> = Vec::with_capacity(100);
+        let blocklist = blocks(&self.token);
+        block_on_all(blocklist.for_each(|user| {
+            fetched += 1;
+
+            blockbag.push((&*user).into());
+
+            if fetched % 100 == 0 {
+                println!("=> Fetched {} blocks, saving...", fetched);
+
+                let inserted_users: Vec<TwitterUser> = {
+                    use crate::schema::twitter_users::dsl::*;
+                    diesel::insert_into(twitter_users)
+                        .values(&blockbag)
+                        .on_conflict(source_id)
+                        .do_nothing() // TODO: should do an update
+                        .get_results(conn)
+                        .expect("!! Failed to insert blocks in db")
+                };
+
+                inserted += inserted_users.len();
+                blockbag.clear();
+
+                let time_left = 65 - bagstart.elapsed().as_secs();
+                println!("-- Sleeping {} seconds", time_left);
+                std::thread::sleep(Duration::from_secs(time_left));
+                bagstart = Instant::now();
+            }
+
+            Ok(())
+        })).expect("!! Can’t read twitter blocks");
+
+        let inserted_users: Vec<TwitterUser> = {
+            use crate::schema::twitter_users::dsl::*;
+            diesel::insert_into(twitter_users)
+                .values(&blockbag)
+                .on_conflict(source_id)
+                .do_nothing() // TODO: should do an update
+                .get_results(conn)
+                .expect("!! Failed to insert blocks in db")
+        };
+
+        inserted += inserted_users.len();
+
+        (fetched, inserted)
     }
 }
 
