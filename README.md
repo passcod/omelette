@@ -2,23 +2,7 @@
 
 [![Build Status](https://travis-ci.com/passcod/omelette.svg?branch=main)](https://travis-ci.com/passcod/omelette)
 
-Inspired by [@MylesBorins’s cleanup tool](https://github.com/MylesBorins/cleanup).
-
-The original idea is simple: given a tweet calling the bot with the hashtag
-`#cleanup` and a time delay in seconds to hours, delete the entire thread, that
-is, go up the reply chain and stop after the first tweet that either has no
-parent or whose parent is someone else’s tweet (we can only delete our own).
-
-Unfortunately, the original stopped working when Twitter disabled its stream API.
-
-So this conceptually started as a re-implementation. But while I want to cleanup
-_public_ history, I kinda want to keep it for myself. I might also want to do
-more powerful or extensive stuff, like cleaning up all branches of a thread, or
-deleting my entire history up to a point, and then keep deleting as I keep
-tweeting, essentially keeping me with a set amount of history, like 6 months or
-something, and archiving the rest. And as I worked, more possibilities emerged.
-
-## so that’s the story. what does this do?
+## what does this do?
 
 Omelette is a collection of small tools:
 
@@ -35,22 +19,30 @@ Omelette is a collection of small tools:
  - `omelette-cleanup` parses the database for `#cleanup` requests and figures
    out which tweets and threads to request deletion for.
 
- - [`omelette-twitter-archive`](#twitter-archive) imports tweets from a Twitter
-   Archive file, either directly from the zip or from the extracted tweets.csv,
-   then returns to the Twitter API to hydrate the tweets aka fill in the details
-   (the archive data is very sparse).
+ - [`omelette-twitter-archive`](#twitter-archive) imports tweets from an old
+   format Twitter Archive file, either directly from the zip or from the
+   extracted tweets.csv. Tweets will need to be hydrated afterwards aka fill in
+   the details as the archive data is very sparse, see below. **(TODO: support
+   new format)**
 
  - [`omelette-twitter-events`](#twitter-events) is a web server that sets up and
    consumes account activity webhook events, stores incoming tweets, and can
    trigger other omelette tools in turn. **(TODO)**
 
+- `omelette-twitter-blocks` imports your entire block list as user IDs. It is
+   pretty slow as Twitter heavily rate limits the calls and there is no useful
+   way to resume the process. Users will need to be hydrated afterwards.
+
+- `omelette-twitter-hydrate` hydrates tweets and users from the API when needed.
+   This is the follow-up step to importing blocks or from archive.
+
 You can bolt on additional behaviour simply by running a script or tool of your
 own that reads statuses from and writes deletion requests to the database.
 Please contribute useful tools back to this repo!
 
-## how do i run it?
+## how do i run them?
 
-Like all twitter bots, this needs keys. It’s to be used only in a personal
+Like all twitter tools, this needs keys. It’s to be used only in a personal
 capacity, so there’s no need to do lots of OAuth. Just sign up for an app, get
 your tokens, put them into your environment:
 
@@ -69,8 +61,8 @@ database the usual way, put the URL in your environment:
 DATABASE_URL=postgres://localhost/dbname
 ```
 
-You’ll also need your user ID. If you don’t know it, you can look it up using
-any of a number of services, like this one: https://tweeterid.com/
+As an optimisation, you’ll also need your user ID. If you don’t know it, you can
+look it up using any of a number of services, like this one: https://tweeterid.com/
 
 ```
 TWITTER_USER_ID=
@@ -82,13 +74,20 @@ At the first run, and after upgrades, you’ll need to set up the database:
 omelette-migrate-db
 ```
 
-And finally, run omelette:
+And finally, run some omelette tools. Some examples:
 
 ```bash
-omelette-sync &&\
-omelette-mediatise &&\
-omelette-cleanup &&\
+# Back up tweets and pull down any media
+omelette-sync && omelette-mediatise
+
+# Parse `#cleanup` requests and mark threads for deleting
+omelette-cleanup
+
+# Show what would be deleted
 omelette-delete --dry-run
+
+# Actually delete tweets
+omelette-delete
 ```
 
 ## …which i install how?
@@ -104,7 +103,7 @@ Otherwise, if you’ve got Rust installed, clone and `cargo build --release`!
 Pass the `--dotenv` flag to load from a `.env` file in the current directory.
 
 Run `omelette-delete` with `--dry-run` for a few days or weeks before trusting
-it to do the right thing. You can run it in `--interactive` mode once in a while
+it to do the right thing automatically. You can run it in `--interactive` mode
 during that time to get prompted before deleting each tweet.
 
 Every time there’s an update to omelette, do that again. There’s no undo, no way
@@ -119,6 +118,8 @@ to an omelette event daemon (see below).
 ## got more docs?
 
 ### twitter-archive
+
+**Only works on old-format Twitter archives (before 2019) for now.**
 
 This tool works on a downloaded [Twitter archive file], which can be requested
 from Twitter and will be emailed to you (warning: in some known cases,
@@ -150,7 +151,7 @@ don’t have time or are on a metered internet connection, for example.
 
 [Twitter archive file]: https://help.twitter.com/en/managing-your-account/how-to-download-your-twitter-archive
 
-### twitter-events
+### twitter-events (not implemented yet)
 
 This tool is a daemon that serves a web service and registers it as a webhook on
 your user account. Twitter then delivers account activity events as HTTP POST
@@ -184,6 +185,24 @@ There’s also a special event `--on-boot` that runs after the webhook service h
 been configured, registered, and connectivity has been checked by Twitter.
 You can find the whole list of events with `--help`.
 
+## the story
+
+The initial impetus to making omelette was to recreate
+[@MylesBorins’s cleanup tool](https://github.com/MylesBorins/cleanup).
+
+The original idea is simple: given a tweet calling the bot with the hashtag
+`#cleanup` and a time delay in seconds to hours, delete the entire thread, that
+is, go up the reply chain and stop after the first tweet that either has no
+parent or whose parent is someone else’s tweet (we can only delete our own).
+
+Unfortunately, the original stopped working when Twitter disabled its stream API.
+
+So this conceptually started as a re-implementation. However it quickly became
+clear that while the cleanup tool is occasionally useful, what's better for me
+is a personal database of all tweets and various other aspects. That lets me
+make powerful queries against my own data, keep a fairly complete backup, that
+is kept up to date on a regular basis, and can feed automation and action tools.
+
 ## who do i have to thank for this?
 
 There’s me, [@passcod](https://passcod.name).
@@ -202,5 +221,6 @@ Don’t be a jerk. Additionally, the [Contributor Covenant] applies.
 
 This may contain bugs. One of the reasons it saves to DB is to avoid complete
 disaster if it deletes stuff it’s not supposed to. But just in case, I advise
-running with the `--dry-run` flag for a few weeks, before trusting it, and after
-upgrades. I am not responsible for you losing your tweets. See clause 14.
+running with the `--dry-run` flag before trusting it, and after upgrades.
+
+I am not responsible for you losing your tweets. See clause 14.

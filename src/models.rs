@@ -82,6 +82,7 @@ pub struct TwitterUser {
     pub fetched_at: DateTime<Utc>,
     pub blocked_at: Option<DateTime<Utc>>,
     pub muted_at: Option<DateTime<Utc>>,
+    pub missing: bool,
     pub ui_language: Option<String>,
     pub ui_timezone: Option<String>,
     pub withheld_in: Option<String>,

@@ -21,3 +21,6 @@ pub fn connect() -> PgConnection {
     PgConnection::establish(&database_url)
         .expect(&format!("!! Error connecting to {}", database_url))
 }
+
+pub const SLIM_MARK: &'static str = "~slim~";
+pub fn slim() -> String { SLIM_MARK.into() }

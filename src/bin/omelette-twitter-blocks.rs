@@ -21,8 +21,8 @@ fn main() {
     let db = omelette::connect();
     let tw = Twitter::load_unboxed().expect("!! Cannot connect to Twitter");
 
-    println!("\n=> Fetching blocks");
-    println!("\n   This can be pretty slow as we do one call per ~minute to aggressively respect the rate-limiting.");
-    let (fetched, inserted) = tw.fetch_blocks(&db);
-    println!("\n=> Fetched {} new blocks, inserted {} new users.", fetched, inserted);
+    println!("\n=> Fetching blocked users’ IDs");
+    println!("-- This can be pretty slow as we do one call per ~minute to aggressively respect the rate-limiting.");
+    let (fetched, inserted) = tw.fetch_block_ids(&db);
+    println!("\n=> Fetched {} blocks, inserted {} new user IDs.", fetched, inserted);
 }

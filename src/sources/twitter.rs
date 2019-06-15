@@ -1,11 +1,11 @@
 use chrono::Utc;
-use crate::inserts::{NewEntity, NewStatus, NewTwitterUser};
+use crate::inserts::{NewEntity, NewStatus, NewTwitterUserID};
 use crate::models::{Status, TwitterUser};
 use crate::sources::{DeleteError, LoadError, StatusSource};
 use crate::types::Source;
 use diesel::prelude::*;
 use egg_mode::tweet::{delete, unretweet, user_timeline};
-use egg_mode::{user::{UserID, blocks}, KeyPair, Token};
+use egg_mode::{user::{UserID, blocks_ids}, KeyPair, Token};
 use futures::Stream;
 use std::collections::HashMap;
 use std::env;
@@ -73,37 +73,37 @@ impl Twitter {
     }
 
     // (fetched, inserted)
-    pub fn fetch_blocks(&self, conn: &PgConnection) -> (usize, usize) {
+    pub fn fetch_block_ids(&self, conn: &PgConnection) -> (usize, usize) {
         let mut fetched = 0;
         let mut inserted = 0;
 
         use std::time::{Instant, Duration};
         let mut bagstart = Instant::now();
-        let mut blockbag: Vec<NewTwitterUser> = Vec::with_capacity(100);
-        let blocklist = blocks(&self.token);
-        block_on_all(blocklist.for_each(|user| {
+        let mut blockbag: Vec<NewTwitterUserID> = Vec::with_capacity(5000);
+        let blocklist = blocks_ids(&self.token);
+        block_on_all(blocklist.for_each(|id| {
             fetched += 1;
 
-            blockbag.push((&*user).into());
+            blockbag.push((*id).into());
 
-            if fetched % 100 == 0 {
-                println!("=> Fetched {} blocks, saving...", fetched);
+            if fetched % 4000 == 0 {
+                println!("=> Fetched {} block IDs, saving...", fetched);
 
-                let inserted_users: Vec<TwitterUser> = {
+                let inserted_ids: Vec<TwitterUser> = {
                     use crate::schema::twitter_users::dsl::*;
                     diesel::insert_into(twitter_users)
                         .values(&blockbag)
                         .on_conflict(source_id)
-                        .do_nothing() // TODO: should do an update
+                        .do_nothing()
                         .get_results(conn)
-                        .expect("!! Failed to insert blocks in db")
+                        .expect("!! Failed to insert IDs in db")
                 };
 
-                inserted += inserted_users.len();
+                inserted += inserted_ids.len();
                 blockbag.clear();
 
-                let time_left = 65 - bagstart.elapsed().as_secs();
-                println!("-- Sleeping {} seconds", time_left);
+                let time_left = 60 - bagstart.elapsed().as_secs();
+                println!("-- Inserted {} new IDs so far, sleeping {} seconds", inserted, time_left);
                 std::thread::sleep(Duration::from_secs(time_left));
                 bagstart = Instant::now();
             }
@@ -111,17 +111,17 @@ impl Twitter {
             Ok(())
         })).expect("!! Can’t read twitter blocks");
 
-        let inserted_users: Vec<TwitterUser> = {
+        let inserted_ids: Vec<TwitterUser> = {
             use crate::schema::twitter_users::dsl::*;
             diesel::insert_into(twitter_users)
                 .values(&blockbag)
                 .on_conflict(source_id)
-                .do_nothing() // TODO: should do an update
+                .do_nothing()
                 .get_results(conn)
-                .expect("!! Failed to insert blocks in db")
+                .expect("!! Failed to insert IDs in db")
         };
 
-        inserted += inserted_users.len();
+        inserted += inserted_ids.len();
 
         (fetched, inserted)
     }

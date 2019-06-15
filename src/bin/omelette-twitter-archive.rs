@@ -1,5 +1,4 @@
 use diesel::prelude::*;
-use omelette::sources::twitter::Twitter;
 use std::{io::Read, path::PathBuf};
 use structopt::StructOpt;
 
@@ -9,14 +8,6 @@ struct Opt {
     /// Read from .env in working directory
     #[structopt(long = "dotenv")]
     dotenv: bool,
-
-    /// Only do “slim” pass (parsing from CSV)
-    #[structopt(long = "only-slim")]
-    only_slim: bool,
-
-    /// Only do “hydrate” pass (hydrating slim entries by Twitter lookup)
-    #[structopt(long = "only-hydrate")]
-    only_hydrate: bool,
 
     /// Archive file. Either a CSV or a ZIP (containing a tweets.csv)
     #[structopt(name = "FILE", parse(from_os_str))]
@@ -36,81 +27,31 @@ fn main() {
         dotenv().ok();
     }
 
-    if opt.only_slim && opt.only_hydrate {
-        println!("!! Cannot use both --only-slim and --only-hydrate");
+    let db = omelette::connect();
+
+    let path = opt.file.expect("!! Missing path to archive file");
+    let ext_csv = path.extension() == Some(OsStr::new("csv"));
+    let is_csv = match_filepath("text/csv", &path);
+    let is_zip = match_filepath("application/zip", &path);
+
+    if !is_zip && !is_csv && !ext_csv {
+        println!("!! File is neither a zip nor a csv, abort.");
         exit(1);
     }
 
-    let do_slim = !opt.only_hydrate;
-    let do_hydrate = !opt.only_slim;
+    let file = File::open(&path).expect("!! File does not exist");
 
-    let db = omelette::connect();
-    let mut ids = Vec::with_capacity(0);
-
-    if do_slim {
-        let path = opt.file.expect("!! Missing path to archive file");
-        let ext_csv = path.extension() == Some(OsStr::new("csv"));
-        let is_csv = match_filepath("text/csv", &path);
-        let is_zip = match_filepath("application/zip", &path);
-
-        if !is_zip && !is_csv && !ext_csv {
-            println!("!! File is neither a zip nor a csv, abort.");
+    if is_zip {
+        let mut archive = ZipArchive::new(file).unwrap();
+        let entry = archive.by_name("tweets.csv").unwrap_or_else(|_| {
+            println!("!!File is not a twitter archive, abort.");
             exit(1);
-        }
+        });
 
-        let file = File::open(&path).expect("!! File does not exist");
-
-        ids = if is_zip {
-            let mut archive = ZipArchive::new(file).unwrap();
-            let entry = archive.by_name("tweets.csv").unwrap_or_else(|_| {
-                println!("!!File is not a twitter archive, abort.");
-                exit(1);
-            });
-
-            slim_load(&db, csv::Reader::from_reader(entry))
-        } else {
-            slim_load(&db, csv::Reader::from_reader(file))
-        };
-    }
-
-    if do_hydrate {
-        let tw = Twitter::load_unboxed().expect("!! Cannot connect to Twitter");
-        // retrieve more info for each ("full" pass)
-
-        // first using the ids from above
-        if !ids.is_empty() {
-            println!("\n=> Hydrating {} newly archived tweets (~{})", ids.len(), hydrate_est(ids.len()));
-            for (i, batch) in ids.chunks(100).enumerate() {
-                println!("-> Batch {} of {} tweets", i, batch.len());
-                hydrate_batch(&db, &tw, batch);
-            }
-        }
-
-        // then going back to the db and querying for slim-pass ones that may
-        // have been missed or when the hydrate-pass was disabled.
-        use omelette::schema::statuses::dsl::*;
-        use omelette::types::{IntermediarySource, Source};
-        let ids_left = statuses.select(id)
-            .filter(source.eq(Source::Twitter))
-            .filter(fetched_via.eq(IntermediarySource::TwitterArchive))
-            .filter(source_author.eq(slim_mark()))
-            .load::<i32>(&db)
-            .expect("!! Cannot query DB for leftover slim entries");
-
-        if !ids_left.is_empty() {
-            println!("\n=> Hydrating {} leftover slim tweets (~{})", ids_left.len(), hydrate_est(ids_left.len()));
-            for (i, batch) in ids_left.chunks(100).enumerate() {
-                println!("-> Batch {} of {} tweets", i + 1, batch.len());
-                hydrate_batch(&db, &tw, batch);
-            }
-        }
-
-        println!("\n=> Done hydrating.")
-    }
-}
-
-fn slim_mark() -> String {
-    "~slim~".into()
+        slim_load(&db, csv::Reader::from_reader(entry))
+    } else {
+        slim_load(&db, csv::Reader::from_reader(file))
+    };
 }
 
 fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i32> {
@@ -165,7 +106,7 @@ fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i3
             marked_at: None,
             source: Source::Twitter,
             source_id: tweet_id,
-            source_author: slim_mark(),
+            source_author: omelette::SLIM_MARK.into(),
             source_app: app,
             in_reply_to_status: Some(in_reply_to_status_id),
             in_reply_to_user: None,
@@ -213,148 +154,4 @@ fn slim_load<R: Read>(conn: &PgConnection, csv_reader: csv::Reader<R>) -> Vec<i3
         ids.len()
     );
     ids
-}
-
-fn hydrate_est(n: usize) -> String {
-    let mut seconds = n * 5 / 100;
-    let hours = seconds / 3600;
-    seconds = seconds % 3600;
-
-    let mut minutes = seconds / 60;
-    if seconds % 60 > 30 {
-        minutes += 1;
-    } else if minutes == 0 {
-        minutes = 1;
-    }
-
-    if hours == 0 {
-        format!("{} minutes", minutes)
-    } else {
-        format!("{} hours {} minutes", hours, minutes)
-    }
-}
-
-fn hydrate_batch(conn: &PgConnection, tw: &Twitter, ids: &[i32]) {
-    use chrono::Utc;
-    use egg_mode::tweet::lookup_map;
-    use omelette::inserts::{NewEntity, NewStatus};
-    use omelette::models::Status;
-    use omelette::types::IntermediarySource;
-    use std::thread::sleep;
-    use std::time::{Duration, Instant};
-    use tokio::runtime::current_thread::block_on_all;
-
-    // Rate-limit on lookups is 300 per app per 15 minutes. That works out at
-    // about one run every 3 seconds. But the *user* limit is 900, and we don't
-    // want to inconvenience the user, nor to forbid other omelette tools that
-    // might use lookups during the same time, so we push up to 5 seconds.
-    let min = Duration::from_secs(5);
-    let now = Instant::now();
-
-    let source_ids: Vec<u64> = {
-        use omelette::schema::statuses::dsl::*;
-        statuses.select(source_id)
-            .filter(id.eq_any(ids))
-            .load::<String>(conn)
-            .expect("!! Cannot connect to DB")
-            .iter()
-            .map(|sid| sid.parse().expect("!! Cannot parse source ID"))
-            .collect()
-    };
-
-    let tweets = match block_on_all(lookup_map(source_ids, &tw.token)) {
-        Ok(tws) => tws,
-        Err(err) => {
-            println!("!! Cannot fetch tweets, skipping batch.\n{:?}", err);
-            return;
-        }
-    };
-
-    let statuses: Vec<Status> = {
-        use omelette::schema::statuses::dsl::*;
-        statuses
-            .filter(id.eq_any(ids))
-            .load(conn)
-            .expect("!! Cannot connect to DB")
-    };
-
-    for status in &statuses {
-        use omelette::schema::statuses::dsl::*;
-
-        let sid: u64 = status.source_id.parse().expect("!! Cannot parse source ID");
-        let tweet = tweets.get(&sid).expect("!! Mismatch between input and lookup");
-
-        if let Some(tweet) = tweet {
-            let mut insert: NewStatus = tweet.into();
-            insert.fetched_via = Some(IntermediarySource::TwitterArchive);
-
-            let mut entitybag = if let Some(ref ents) = tweet.extended_entities {
-                NewEntity::from_extended(&ents)
-            } else {
-                Vec::new()
-            };
-
-            // Update and insert in a transaction so we don’t save an hydrated
-            // tweet without its entities if we’re interrupted in the middle.
-            conn.transaction::<_, diesel::result::Error, _>(|| {
-                let new_id = if status.source_id == insert.source_id {
-                    diesel::update(statuses.find(status.id))
-                        .set(insert)
-                        .execute(conn)?;
-
-                    status.id
-                } else {
-                    // Hydrating to a retweet.
-                    // We instead insert the hydrated tweet and delete the slim.
-
-                    let nids: Vec<i32> = diesel::insert_into(statuses)
-                        .values(&insert)
-                        .on_conflict(source_id)
-                        .do_nothing()
-                        .returning(id)
-                        .load(conn)?;
-
-                    let nid = match nids.get(0) {
-                        Some(n) => n.clone(),
-                        None => statuses.select(id)
-                            .filter(source_id.eq(insert.source_id))
-                            .first::<i32>(conn)?
-                    };
-
-                    diesel::delete(statuses.find(status.id))
-                        .execute(conn)?;
-
-                    nid
-                };
-
-                // Add those late so it picks up if the ID has changed above
-                for ent in &mut entitybag {
-                    ent.status_id = new_id;
-                }
-
-                {
-                    use omelette::schema::entities::dsl::*;
-                    diesel::insert_into(entities)
-                        .values(&entitybag)
-                        .on_conflict(source_id)
-                        .do_nothing()
-                        .execute(conn)?;
-                }
-
-                Ok(())
-            }).expect("!! Cannot update DB");
-        } else {
-            diesel::update(statuses.find(status.id))
-                .set((
-                    source_author.eq("".to_string()),
-                    deleted_at.eq(Utc::now())
-                ))
-                .execute(conn)
-                .expect("!! Cannot update DB");
-        }
-    }
-
-    if let Some(left) = min.checked_sub(now.elapsed()) {
-        sleep(left);
-    }
 }

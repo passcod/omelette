@@ -19,6 +19,7 @@ CREATE TABLE twitter_users (
   fetched_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
   blocked_at timestamp with time zone,
   muted_at timestamp with time zone,
+  missing boolean DEFAULT FALSE NOT NULL,
   ui_language text,
   ui_timezone text,
   withheld_in text,
@@ -47,6 +48,7 @@ COMMENT ON COLUMN twitter_users.created_at IS 'When the user was created on Twit
 COMMENT ON COLUMN twitter_users.fetched_at IS 'When Omelette retrieved this user';
 COMMENT ON COLUMN twitter_users.blocked_at IS 'If pre-existing block, same as fetched_at, otherwise, when the user was blocked';
 COMMENT ON COLUMN twitter_users.muted_at IS 'If pre-existing mute, same as fetched_at, otherwise, when the user was muted';
+COMMENT ON COLUMN twitter_users.missing IS 'Was missing when last looked up or hydrated';
 COMMENT ON COLUMN twitter_users.ui_language IS 'Language this user has set their UI to';
 COMMENT ON COLUMN twitter_users.ui_timezone IS 'Timezone this user has set their UI to';
 COMMENT ON COLUMN twitter_users.withheld_in IS 'Countries this user or their tweets are withheld in';

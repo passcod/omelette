@@ -192,7 +192,7 @@ impl NewDeletion {
     }
 }
 
-#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
+#[derive(AsChangeset, Clone, Debug, Insertable, PartialEq, PartialOrd)]
 #[table_name = "twitter_users"]
 pub struct NewTwitterUser {
     pub source_id: String,
@@ -214,6 +214,7 @@ pub struct NewTwitterUser {
     pub fetched_at: DateTime<Utc>,
     pub blocked_at: Option<DateTime<Utc>>,
     pub muted_at: Option<DateTime<Utc>>,
+    pub missing: bool,
     pub ui_language: Option<String>,
     pub ui_timezone: Option<String>,
     pub withheld_in: Option<String>,
@@ -242,10 +243,33 @@ impl From<&EggUser> for NewTwitterUser {
             fetched_at: Utc::now(),
             blocked_at: None,
             muted_at: None,
+            missing: false,
             ui_language: u.lang.clone(),
             ui_timezone: u.time_zone.clone(),
             withheld_in: u.withheld_in_countries.clone().map(|v| v.join(", ")),
             withheld_scope: u.withheld_scope.clone(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Insertable, PartialEq, PartialOrd)]
+#[table_name = "twitter_users"]
+pub struct NewTwitterUserID {
+    pub source_id: String,
+    pub screen_name: String,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub fetched_at: DateTime<Utc>,
+}
+
+impl From<u64> for NewTwitterUserID {
+    fn from(uid: u64) -> NewTwitterUserID {
+        NewTwitterUserID {
+            source_id: format!("{}", uid),
+            screen_name: crate::SLIM_MARK.into(),
+            name: "".into(),
+            created_at: Utc::now(),
+            fetched_at: Utc::now(),
         }
     }
 }

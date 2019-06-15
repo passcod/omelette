@@ -86,6 +86,7 @@ table! {
         fetched_at -> Timestamptz,
         blocked_at -> Nullable<Timestamptz>,
         muted_at -> Nullable<Timestamptz>,
+        missing -> Bool,
         ui_language -> Nullable<Text>,
         ui_timezone -> Nullable<Text>,
         withheld_in -> Nullable<Text>,
